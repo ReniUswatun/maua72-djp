@@ -18,7 +18,8 @@ export type Permission =
   | "account.manage"
   | "activity.view"
   | "ai.metrics.view"
-  | "rbac.manage";
+  | "rbac.manage"
+  | "panduan.manage";
 
 export const ALL_PERMISSIONS: Permission[] = [
   "dashboard.view",
@@ -27,6 +28,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   "case.decide",
   "history.view",
   "report.export",
+  "panduan.manage",
   "account.manage",
   "activity.view",
   "ai.metrics.view",
@@ -40,6 +42,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   "case.decide": "Ambil keputusan (approve / tolak / minta info)",
   "history.view": "Lihat riwayat & audit trail",
   "report.export": "Ekspor laporan (CSV)",
+  "panduan.manage": "Kelola konten panduan (CMS)",
   "account.manage": "Kelola akun admin/officer",
   "activity.view": "Lihat log aktivitas admin",
   "ai.metrics.view": "Lihat metrik akurasi AI",
@@ -59,6 +62,10 @@ export const PERMISSION_GROUPS: { judul: string; permissions: Permission[] }[] =
     ],
   },
   {
+    judul: "Konten",
+    permissions: ["panduan.manage"],
+  },
+  {
     judul: "Super admin / tata kelola",
     permissions: ["account.manage", "activity.view", "ai.metrics.view", "rbac.manage"],
   },
@@ -73,6 +80,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     "case.decide",
     "history.view",
     "report.export",
+    "panduan.manage",
   ],
   super_admin: [...ALL_PERMISSIONS],
 };

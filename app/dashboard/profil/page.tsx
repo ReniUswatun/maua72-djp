@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Check, Pencil, Sparkles } from "lucide-react";
+import { Check, FileText, Pencil, Trash2, Upload } from "lucide-react";
 
 
 import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
 import {
@@ -67,8 +68,8 @@ export default function ProfilPage() {
             Profil Usaha
           </h1>
           <p className="mt-2 max-w-2xl leading-relaxed text-gray-600">
-            Data ini menentukan pertanyaan tambahan yang muncul pada asesmen.
-            Perbarui bila ada perubahan status legalitas.
+            Data usaha dan berkas legalitas di halaman ini dipakai petugas untuk memverifikasi
+            pengajuan ekspor Anda. Perbarui bila ada perubahan.
           </p>
         </div>
         {!edit ? (
@@ -81,8 +82,7 @@ export default function ProfilPage() {
 
       {tersimpan ? (
         <Alert tone="success" judul="Profil diperbarui">
-          Perubahan tersimpan. Jalankan asesmen ulang bila perubahan menyangkut
-          legalitas atau kategori usaha.
+          Perubahan tersimpan.
         </Alert>
       ) : null}
 
@@ -249,6 +249,126 @@ export default function ProfilPage() {
         )}
       </section>
 
+      <BerkasLegalitas />
+    </div>
+  );
+}
+
+function BerkasLegalitas() {
+  const profile = useAppStore((s) => s.profile);
+  const simpanBerkasUsaha = useAppStore((s) => s.simpanBerkasUsaha);
+
+  if (!profile) {
+    return (
+      <section className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8">
+        <h2 className="text-xl font-semibold">Berkas Legalitas</h2>
+        <p className="mt-3 text-sm text-gray-600">
+          Simpan data usaha terlebih dahulu, lalu unggah salinan PDF NIB dan NPWP di sini.
+        </p>
+      </section>
+    );
+  }
+
+  const items = [
+    { jenis: "nib" as const, label: "Dokumen NIB", file: profile.fileNib, nomor: profile.nomorNib },
+    { jenis: "npwp" as const, label: "Dokumen NPWP", file: profile.fileNpwp, nomor: profile.nomorNpwp },
+  ];
+
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8">
+      <h2 className="text-xl font-semibold">Berkas Legalitas</h2>
+      <p className="mt-2 text-sm text-gray-600">
+        Unggah salinan PDF NIB dan NPWP usaha. Berkas ini dipakai petugas saat memverifikasi
+        data usaha Anda.
+      </p>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        {items.map((item) => (
+          <BerkasSlot
+            key={item.jenis}
+            label={item.label}
+            nomor={item.nomor}
+            file={item.file ?? null}
+            onUpload={(url) => simpanBerkasUsaha(item.jenis, url)}
+            onRemove={() => simpanBerkasUsaha(item.jenis, null)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function BerkasSlot({
+  label,
+  nomor,
+  file,
+  onUpload,
+  onRemove,
+}: {
+  label: string;
+  nomor?: string;
+  file: string | null;
+  onUpload: (url: string) => void;
+  onRemove: () => void;
+}) {
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const pilih = (f: File | undefined) => {
+    if (!f) return;
+    if (f.size > 3_000_000) {
+      setError("Berkas terlalu besar (maks 3 MB).");
+      return;
+    }
+    setError(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") onUpload(reader.result);
+    };
+    reader.readAsDataURL(f);
+  };
+
+  return (
+    <div className="rounded-xl border border-gray-200 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-gray-900">{label}</p>
+        <Badge tone={file ? "success" : "neutral"}>{file ? "Terunggah" : "Belum ada"}</Badge>
+      </div>
+      <p className="mt-1 text-xs text-gray-500">Nomor: {nomor?.trim() ? nomor : "belum diisi"}</p>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/pdf,image/*"
+        className="sr-only"
+        aria-label={`Unggah ${label}`}
+        onChange={(e) => {
+          pilih(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {file ? (
+          <a href={file} target="_blank" rel="noreferrer">
+            <Button size="sm" variant="outline">
+              <FileText className="h-4 w-4" aria-hidden />
+              Lihat
+            </Button>
+          </a>
+        ) : null}
+        <Button size="sm" variant={file ? "ghost" : "outline"} onClick={() => inputRef.current?.click()}>
+          <Upload className="h-4 w-4" aria-hidden />
+          {file ? "Ganti" : "Unggah"}
+        </Button>
+        {file ? (
+          <Button size="sm" variant="ghost" onClick={onRemove}>
+            <Trash2 className="h-4 w-4" aria-hidden />
+            Hapus
+          </Button>
+        ) : null}
+      </div>
+      {error ? <p className="mt-2 text-xs font-medium text-danger">{error}</p> : null}
     </div>
   );
 }

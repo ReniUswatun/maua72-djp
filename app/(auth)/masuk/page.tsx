@@ -5,7 +5,7 @@ import { FormMasuk } from "./FormMasuk";
 
 export const metadata: Metadata = {
   title: "Masuk",
-  description: "Masuk ke SiapEkspor sebagai UMKM, Officer, atau Super Admin.",
+  description: "Masuk ke SiapEkspor dengan email dan kata sandi. Peran ditentukan otomatis dari akun.",
 };
 
 export default function MasukPage() {

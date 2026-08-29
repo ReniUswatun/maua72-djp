@@ -113,11 +113,11 @@ export default function PanduanDokumenPage({ params }: { params: { id: string } 
   return (
     <div className="mx-auto max-w-4xl py-8">
       <Link
-        href="/dashboard"
+        href="/panduan#dokumen"
         className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft className="h-4 w-4" />
-        Kembali ke Dashboard
+        Kembali ke Panduan
       </Link>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-10">

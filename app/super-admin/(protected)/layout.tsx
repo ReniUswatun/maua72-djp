@@ -12,7 +12,7 @@ export default function SuperAdminProtectedLayout({ children }: { children: Reac
       <AdminShell
         brand="Super Admin"
         navItems={SUPER_ADMIN_NAV}
-        accent="bg-gradient-to-br from-amber-500 to-orange-600"
+        accent="bg-accent-500"
         loginHref="/masuk?peran=super_admin"
       >
         {children}

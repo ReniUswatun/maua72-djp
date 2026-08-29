@@ -190,17 +190,53 @@ mengubah komponen.
 
 ## Peran & akses
 
-Tiga peran, satu halaman masuk (`/masuk`) dengan pemilih peran:
+Tiga peran, satu halaman masuk (`/masuk`) **tanpa pemilih peran**. Email + kata
+sandi sudah menentukan peran; setelah login sistem otomatis mengarahkan ke area
+yang sesuai.
 
-| Peran | Login | Area | Akun demo |
+| Peran | Login | Diarahkan ke | Kredensial |
 |---|---|---|---|
-| UMKM | `/masuk` → UMKM | `/dashboard` | tombol "akun demo" |
-| Officer | `/masuk` → Officer | `/admin` | `ahmad.fauzi@beacukai.go.id` / `admin123` |
-| Super Admin | `/masuk` → Super Admin | `/super-admin` | `dewi.lestari@beacukai.go.id` / `super123` |
+| UMKM (demo) | `sari@kopimerapi.id` | `/dashboard` | `umkm123` (memuat data demo) |
+| UMKM (lain) | email apa pun | `/dashboard` | kata sandi bebas (mock) |
+| Officer | `ahmad.fauzi@beacukai.go.id` | `/admin` | `officer123` |
+| Super Admin | `dewi.lestari@beacukai.go.id` | `/super-admin` | `superadmin123` |
 
-`/admin/masuk` dan `/super-admin/masuk` di-redirect ke `/masuk`. RBAC diatur di
-`lib/rbac.ts`; super admin mengubah izin per peran di `/super-admin/akses`, dan
+Kredensial admin/officer ada di `lib/admin-data.ts` (`ADMIN_CREDENTIALS`). RBAC
+diatur di `lib/rbac.ts`; super admin mengubah izin per peran di
+`/super-admin/akses`, mengelola akun (CRUD penuh) di `/super-admin/akun`, dan
 `AdminGate` memblokir halaman sekaligus `AdminShell` menyembunyikan menu.
+
+**Area UMKM** (`/dashboard`):
+
+- `/dashboard/pengajuan` — riwayat semua pengajuan ekspor + filter status. Buka
+  satu pengajuan untuk mengelola dokumen. Jika status `revisi`/`ditolak`, UMKM
+  mengunggah ulang dokumen yang ditandai lalu **kirim ulang**; saat masih
+  `review` bisa ditarik dulu untuk diperbaiki.
+- `/dashboard/riwayat` — konsultasi berbentuk **ticketing**: tiap pertanyaan jadi
+  satu tiket dengan riwayat percakapan UMKM ↔ petugas.
+- `/dashboard/profil` — data usaha + **unggah berkas PDF NIB dan NPWP**
+  (`fileNib` / `fileNpwp`), bukan hanya nomor.
+- `/dashboard/panduan` — panduan runtut (bukan kumpulan artikel) di dalam shell
+  dashboard: tahap ekspor dari nol sampai barang berangkat, lalu tiap dokumen +
+  cara mendapatkannya, plus glosarium yang bisa dikuncupkan. Isi yang sama juga
+  tampil publik di `/panduan`.
+
+**Panduan CMS** (`/admin/panduan`, izin `panduan.manage`, default officer &
+super admin): tambah / sunting / hapus / urutkan / terbitkan-sembunyikan entri
+panduan. Data di `store/panduan-store.ts` (localStorage `siapekspor-panduan`,
+seed dari `lib/panduan.ts`). Entri inti bawaan `terkunci` — boleh disunting,
+tidak boleh dihapus (jadikan draf untuk menyembunyikan). Tombol "Kembalikan ke
+bawaan" me-reset ke seed.
+
+**Alur officer** berpusat pada dokumen, bukan skor asesmen:
+
+- `/admin/pengajuan` — daftar pengajuan; dokumen dibuka per pengajuan (tidak
+  ditampilkan sekaligus) lewat daftar yang bisa dikuncupkan.
+- `/admin/data-usaha` — persetujuan data usaha (NIB, NPWP, profil) terpisah dari
+  keputusan dokumen ekspor.
+- OCR membaca tiap PDF yang diunggah UMKM dan membandingkannya dengan template
+  contoh; ketidaksesuaian menjadi catatan yang dibaca officer & super admin.
+  Metrik akurasinya di `/super-admin/akurasi-ai`.
 
 Halaman `/portal` adalah pengantar publik: penjelasan platform + tiga peran.
 

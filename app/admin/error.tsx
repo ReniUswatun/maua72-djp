@@ -23,10 +23,10 @@ export default function AdminError({
         <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-red-700">
           <TriangleAlert className="h-6 w-6" aria-hidden />
         </span>
-        <h1 className="mt-4 text-xl font-bold tracking-tight text-slate-900">
+        <h1 className="mt-4 text-xl font-bold tracking-tight text-gray-900">
           Terjadi kesalahan di area admin
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-slate-600">
+        <p className="mt-2 text-sm leading-relaxed text-gray-600">
           Halaman ini gagal dimuat. Coba muat ulang; jika masih gagal, kembali ke dashboard.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">

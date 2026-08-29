@@ -11,9 +11,9 @@ export default function AdminProtectedLayout({ children }: { children: React.Rea
       requiredPermission="dashboard.view"
     >
       <AdminShell
-        brand="Officer Workspace"
+        brand="Ruang Kerja Officer"
         navItems={ADMIN_NAV}
-        accent="bg-gradient-to-br from-slate-700 to-slate-950"
+        accent="bg-primary-600"
         loginHref="/masuk?peran=officer"
       >
         {children}

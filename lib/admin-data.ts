@@ -1,120 +1,20 @@
-import { deriveDimensionInsight } from "./ai-insights";
-import { getPillar } from "./assessment-config";
-import { buatRekomendasi } from "./recommendations";
-import { hitungHasil, LEVELS } from "./scoring";
-import {
-  DEMO_ANSWERS,
-  DEMO_PROFILE,
-  DEMO_USER,
-  MOCK_DOCUMENTS,
-  MOCK_TIMELINE,
-  PETUGAS,
-} from "./mock-data";
+import { buildSamplePdf } from "./sample-doc";
+import { PETUGAS } from "./mock-data";
 import type {
   AdminAccount,
   ApplicationCase,
   AuditLogEntry,
-  BusinessProfile,
-  DocumentPrecheckFinding,
-  ReviewDimension,
+  DocumentItem,
+  DocumentOcrResult,
+  OcrFieldCheck,
   ReviewStage,
   TimelineEvent,
-  User,
 } from "./types";
 
-function cloneTimeline(events: TimelineEvent[]) {
-  return [...events].sort((a, b) => +new Date(a.tanggal) - +new Date(b.tanggal));
-}
-
-function buildAudit(action: string, officer: string, note?: string): AuditLogEntry {
-  return {
-    id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    timestamp: new Date().toISOString(),
-    officer,
-    action,
-    note,
-  };
-}
-
-function buildDimensions(
-  caseId: string,
-  answers: ApplicationCase["rawAnswers"],
-  assessment: ApplicationCase["assessment"],
-  profile: BusinessProfile,
-): ReviewDimension[] {
-  const recommendations = buatRekomendasi(answers, assessment, profile);
-
-  return assessment.pilar.map((pillar) => {
-    const aiRecommendation =
-      recommendations.find((item) => item.pillarId === pillar.pillarId)?.ringkas ??
-      `Skor pilar ${pillar.pillarId} perlu ditinjau petugas.`;
-    const insight = deriveDimensionInsight(pillar, answers, profile);
-    const pillarName = getPillar(pillar.pillarId)?.nama ?? `Pilar ${pillar.pillarId}`;
-
-    return {
-      id: `${caseId}-pillar-${pillar.pillarId}`,
-      label: pillarName,
-      pillarId: pillar.pillarId,
-      aiScore: pillar.skor,
-      aiDraft: aiRecommendation,
-      aiReason: insight.reason,
-      aiConfidence: insight.confidence,
-      confidenceReason: insight.confidenceReason,
-      officerScore: pillar.skor,
-      officerDraft: aiRecommendation,
-      status: "baru" as ReviewStage,
-    };
-  });
-}
-
-function createCase(params: {
-  id: string;
-  user: User;
-  profile: BusinessProfile;
-  answers: ApplicationCase["rawAnswers"];
-  submittedAt: string;
-  status: ReviewStage;
-  timeline: TimelineEvent[];
-  documents?: ApplicationCase["documents"];
-  precheckFindings?: DocumentPrecheckFinding[];
-  internalNotes?: string[];
-}): ApplicationCase {
-  const assessment = hitungHasil(params.answers, params.profile, params.submittedAt);
-  const timeline = cloneTimeline(params.timeline);
-  const aiDraft = `AI menilai usaha pada Level ${assessment.level} dengan skor ${assessment.skorTotal}/100.`;
-
-  return {
-    id: params.id,
-    businessName: params.profile.namaUsaha,
-    ownerName: params.user.nama,
-    email: params.user.email,
-    phone: params.user.hp,
-    city: params.profile.kota,
-    province: params.profile.provinsi,
-    status: params.status,
-    readinessLevel: assessment.level,
-    readinessScore: assessment.skorTotal,
-    submittedAt: params.submittedAt,
-    lastUpdatedAt: timeline.at(-1)?.tanggal ?? params.submittedAt,
-    aiSummary: aiDraft,
-    aiDraft,
-    rawAnswers: params.answers,
-    assessment,
-    profile: params.profile,
-    documents: params.documents ?? MOCK_DOCUMENTS,
-    dimensions: buildDimensions(params.id, params.answers, assessment, params.profile),
-    timeline,
-    auditTrail: [
-      buildAudit(
-        "Pengajuan masuk ke dashboard officer",
-        PETUGAS[0].nama,
-        `Data awal dari ${params.user.nama} diterima untuk ditinjau.`,
-      ),
-    ],
-    precheckFindings: params.precheckFindings,
-    internalNotes: params.internalNotes,
-  };
-}
+/* ------------------------------------------------------------------ *
+ * Data admin — daftar akun officer/super admin + pengajuan ekspor
+ * UMKM yang masuk ke meja officer. Semua ini pengganti backend.
+ * ------------------------------------------------------------------ */
 
 export const ADMIN_ACCOUNTS: AdminAccount[] = [
   {
@@ -122,7 +22,6 @@ export const ADMIN_ACCOUNTS: AdminAccount[] = [
     nama: PETUGAS[0].nama,
     email: "ahmad.fauzi@beacukai.go.id",
     role: "officer",
-    jabatan: PETUGAS[0].jabatan,
     aktif: true,
     lastLoginAt: "2026-08-29T08:10:00.000Z",
   },
@@ -131,7 +30,6 @@ export const ADMIN_ACCOUNTS: AdminAccount[] = [
     nama: PETUGAS[1].nama,
     email: "retno.wulandari@beacukai.go.id",
     role: "officer",
-    jabatan: PETUGAS[1].jabatan,
     aktif: true,
     lastLoginAt: "2026-08-28T14:40:00.000Z",
   },
@@ -140,205 +38,411 @@ export const ADMIN_ACCOUNTS: AdminAccount[] = [
     nama: "Dewi Lestari",
     email: "dewi.lestari@beacukai.go.id",
     role: "super_admin",
-    jabatan: "Super Admin Sistem",
     aktif: true,
     lastLoginAt: "2026-08-29T07:55:00.000Z",
   },
 ];
 
-export const ADMIN_CREDENTIALS = [
-  { email: "ahmad.fauzi@beacukai.go.id", password: "admin123", role: "officer" as const },
-  { email: "retno.wulandari@beacukai.go.id", password: "admin123", role: "officer" as const },
-  { email: "dewi.lestari@beacukai.go.id", password: "super123", role: "super_admin" as const },
+/** Kredensial login prototipe. Password sudah menentukan peran. */
+export const ADMIN_CREDENTIALS: {
+  email: string;
+  password: string;
+  role: AdminAccount["role"];
+}[] = [
+  { email: "ahmad.fauzi@beacukai.go.id", password: "officer123", role: "officer" },
+  { email: "retno.wulandari@beacukai.go.id", password: "officer123", role: "officer" },
+  { email: "dewi.lestari@beacukai.go.id", password: "superadmin123", role: "super_admin" },
 ];
 
+function audit(action: string, officer: string, note?: string): AuditLogEntry {
+  return {
+    id: `audit-${action.slice(0, 6)}-${Math.random().toString(36).slice(2, 7)}`,
+    timestamp: "2026-08-28T02:00:00.000Z",
+    officer,
+    action,
+    note,
+  };
+}
+
+function ocr(
+  template: string,
+  status: DocumentOcrResult["status"],
+  ringkas: string,
+  temuan: OcrFieldCheck[],
+): DocumentOcrResult {
+  return {
+    template,
+    status,
+    ringkas,
+    diperiksaPada: "2026-08-27T09:00:00.000Z",
+    temuan,
+  };
+}
+
+function pdf(judul: string, baris: string[]): string {
+  try {
+    return buildSamplePdf(judul, baris);
+  } catch {
+    return "";
+  }
+}
+
+/* ---------- Dokumen per pengajuan ---------- */
+
+function dokumenKopiMerapi(): DocumentItem[] {
+  return [
+    {
+      id: "doc-nib",
+      nama: "Nomor Induk Berusaha (NIB)",
+      keterangan: "Diterbitkan lewat OSS.",
+      wajib: true,
+      status: "diverifikasi",
+      namaFile: "NIB-KopiMerapi.pdf",
+      tanggal: "2026-08-25",
+      fileUrl: pdf("NOMOR INDUK BERUSAHA", [
+        "Nama Usaha : Kopi Merapi Nusantara",
+        "NIB        : 0812250034567",
+        "KBLI       : 10761 - Pengolahan Kopi",
+        "Status     : Aktif",
+      ]),
+      ocr: ocr("Contoh NIB OSS", "cocok", "Semua kolom sesuai dengan data usaha.", [
+        { field: "Nama usaha", terbaca: "Kopi Merapi Nusantara", diharapkan: "Kopi Merapi Nusantara", sesuai: true },
+        { field: "Nomor NIB", terbaca: "0812250034567", diharapkan: "0812250034567", sesuai: true },
+        { field: "Status", terbaca: "Aktif", diharapkan: "Aktif", sesuai: true },
+      ]),
+    },
+    {
+      id: "doc-invoice",
+      nama: "Commercial Invoice",
+      keterangan: "Faktur komersial ke pembeli luar negeri.",
+      wajib: true,
+      status: "diunggah",
+      namaFile: "Invoice-INV-2026-041.pdf",
+      tanggal: "2026-08-26",
+      fileUrl: pdf("COMMERCIAL INVOICE", [
+        "Invoice No : INV-2026-041",
+        "Exporter   : Kopi Merapi Nusantara",
+        "Consignee  : Bremen Kaffee GmbH",
+        "Product    : Roasted Arabica Coffee 250g",
+        "Quantity   : 1.200 pcs",
+        "Total      : USD 14.800",
+        "Incoterm   : FOB Semarang",
+      ]),
+      ocr: ocr(
+        "Template Commercial Invoice ekspor",
+        "perlu_perbaikan",
+        "Nilai total pada invoice (USD 14.800) berbeda dengan nilai pengajuan (USD 15.000).",
+        [
+          { field: "Nama eksportir", terbaca: "Kopi Merapi Nusantara", diharapkan: "Kopi Merapi Nusantara", sesuai: true },
+          { field: "Consignee", terbaca: "Bremen Kaffee GmbH", diharapkan: "Bremen Kaffee GmbH", sesuai: true },
+          {
+            field: "Nilai total",
+            terbaca: "USD 14.800",
+            diharapkan: "USD 15.000",
+            sesuai: false,
+            catatan: "Samakan nilai invoice dengan nilai pada formulir pengajuan atau perbarui nilai pengajuan.",
+          },
+          {
+            field: "Incoterm",
+            terbaca: "FOB Semarang",
+            diharapkan: "FOB (pelabuhan muat)",
+            sesuai: true,
+          },
+        ],
+      ),
+    },
+    {
+      id: "doc-packing",
+      nama: "Packing List",
+      keterangan: "Rincian isi setiap kemasan.",
+      wajib: true,
+      status: "diunggah",
+      namaFile: "PackingList-041.pdf",
+      tanggal: "2026-08-26",
+      fileUrl: pdf("PACKING LIST", [
+        "Ref Invoice : INV-2026-041",
+        "Total Carton: (tidak terbaca)",
+        "Net Weight  : 300 kg",
+        "Gross Weight: 330 kg",
+      ]),
+      ocr: ocr("Template Packing List ekspor", "perlu_perbaikan", "Jumlah karton tidak terbaca pada dokumen.", [
+        { field: "Nomor invoice terkait", terbaca: "INV-2026-041", diharapkan: "INV-2026-041", sesuai: true },
+        {
+          field: "Jumlah karton",
+          terbaca: "-",
+          diharapkan: "Angka jumlah karton",
+          sesuai: false,
+          catatan: "Kolom jumlah karton kosong / tidak terbaca. Mohon unggah ulang dengan kolom terisi.",
+        },
+        { field: "Berat bersih", terbaca: "300 kg", diharapkan: "≈ 300 kg", sesuai: true },
+      ]),
+    },
+    {
+      id: "doc-peb",
+      nama: "Pemberitahuan Ekspor Barang (PEB)",
+      keterangan: "Diajukan lewat CEISA sebelum barang dimuat.",
+      wajib: true,
+      status: "belum",
+    },
+  ];
+}
+
+function dokumenSederhana(prefix: string, uploaded: number): DocumentItem[] {
+  const base: Omit<DocumentItem, "status">[] = [
+    { id: "doc-nib", nama: "Nomor Induk Berusaha (NIB)", keterangan: "Diterbitkan lewat OSS.", wajib: true },
+    { id: "doc-invoice", nama: "Commercial Invoice", keterangan: "Faktur komersial.", wajib: true },
+    { id: "doc-packing", nama: "Packing List", keterangan: "Rincian kemasan.", wajib: true },
+    { id: "doc-peb", nama: "Pemberitahuan Ekspor Barang (PEB)", keterangan: "Dokumen pabean.", wajib: true },
+  ];
+
+  return base.map((doc, index) => {
+    if (index >= uploaded) return { ...doc, status: "belum" as const };
+    return {
+      ...doc,
+      status: "diunggah" as const,
+      namaFile: `${prefix}-${doc.id}.pdf`,
+      tanggal: "2026-08-27",
+      fileUrl: pdf(doc.nama.toUpperCase(), [`Berkas contoh untuk ${doc.nama}`, `Pengajuan: ${prefix}`]),
+      ocr:
+        doc.id === "doc-invoice"
+          ? ocr("Template Commercial Invoice ekspor", "cocok", "Data invoice sesuai template.", [
+              { field: "Nama eksportir", terbaca: "sesuai", diharapkan: "sesuai", sesuai: true },
+              { field: "Nilai total", terbaca: "sesuai", diharapkan: "sesuai", sesuai: true },
+            ])
+          : undefined,
+    };
+  });
+}
+
+/* ---------- Daftar pengajuan ---------- */
+
+interface CaseSeed {
+  id: string;
+  businessName: string;
+  ownerName: string;
+  email: string;
+  phone: string;
+  city: string;
+  kategori: string;
+  nomorNib?: string;
+  nomorNpwp?: string;
+  status: ReviewStage;
+  dataUsaha: ApplicationCase["dataUsaha"];
+  dataUsahaCatatan?: string;
+  namaProduk: string;
+  negaraTujuan: string;
+  hsCode: string;
+  nilaiEkspor: string;
+  submittedAt: string;
+  documents: DocumentItem[];
+  timeline: TimelineEvent[];
+  internalNotes?: string[];
+}
+
+function buildCase(seed: CaseSeed): ApplicationCase {
+  return {
+    id: seed.id,
+    businessName: seed.businessName,
+    ownerName: seed.ownerName,
+    email: seed.email,
+    phone: seed.phone,
+    city: seed.city,
+    province: "Jawa Tengah",
+    kategori: seed.kategori,
+    status: seed.status,
+    submittedAt: seed.submittedAt,
+    lastUpdatedAt: seed.timeline.at(-1)?.tanggal ?? seed.submittedAt,
+    profile: {
+      namaUsaha: seed.businessName,
+      kota: seed.city,
+      provinsi: "Jawa Tengah",
+      tahunBerdiri: "2019",
+      kategoriId: seed.kategori,
+      nomorNib: seed.nomorNib,
+      nomorNpwp: seed.nomorNpwp,
+    },
+    dataUsaha: seed.dataUsaha,
+    dataUsahaCatatan: seed.dataUsahaCatatan,
+    namaProduk: seed.namaProduk,
+    negaraTujuan: seed.negaraTujuan,
+    hsCode: seed.hsCode,
+    nilaiEkspor: seed.nilaiEkspor,
+    documents: seed.documents,
+    timeline: [...seed.timeline].sort((a, b) => +new Date(a.tanggal) - +new Date(b.tanggal)),
+    auditTrail: [audit("Pengajuan masuk ke meja officer", PETUGAS[0].nama, `Data dari ${seed.ownerName} diterima.`)],
+    internalNotes: seed.internalNotes,
+  };
+}
+
 export const ADMIN_CASES: ApplicationCase[] = [
-  createCase({
-    id: "case-kopi-merapi",
-    user: DEMO_USER,
-    profile: DEMO_PROFILE,
-    answers: DEMO_ANSWERS,
-    submittedAt: "2026-08-26T04:00:00.000Z",
+  buildCase({
+    id: "PE-202608-KOPI",
+    businessName: "Kopi Merapi Nusantara",
+    ownerName: "Sari Utami",
+    email: "sari@kopimerapi.id",
+    phone: "0812-3456-7890",
+    city: "Boyolali",
+    kategori: "kopi",
+    nomorNib: "0812250034567",
+    nomorNpwp: "987654321098765",
     status: "direview",
-    timeline: MOCK_TIMELINE,
-    documents: MOCK_DOCUMENTS,
-    precheckFindings: [
+    dataUsaha: "disetujui",
+    namaProduk: "Roasted Arabica Coffee 250g",
+    negaraTujuan: "Jerman",
+    hsCode: "0901.21.10",
+    nilaiEkspor: "15000",
+    submittedAt: "2026-08-26T04:00:00.000Z",
+    documents: dokumenKopiMerapi(),
+    timeline: [
       {
-        documentId: "doc-invoice",
-        documentName: "Commercial Invoice",
-        field: "Nilai barang",
-        issue: "Nilai total belum konsisten dengan packing list pada draft terakhir.",
-        severity: "warning",
+        id: "tl-kopi-1",
+        kind: "asesmen",
+        judul: "Pengajuan ekspor dikirim",
+        detail: "Pengajuan untuk Roasted Arabica Coffee tujuan Jerman.",
+        tanggal: "2026-08-26T04:00:00.000Z",
+        aktor: "Sari Utami",
       },
       {
-        documentId: "doc-packing",
-        documentName: "Packing List",
-        field: "Jumlah karton",
-        issue: "Jumlah karton belum diisi pada versi unggahan saat ini.",
-        severity: "critical",
+        id: "tl-kopi-2",
+        kind: "dokumen",
+        judul: "OCR menemukan 2 ketidaksesuaian dokumen",
+        detail: "Commercial Invoice dan Packing List perlu diperbaiki.",
+        tanggal: "2026-08-27T09:05:00.000Z",
+        aktor: "Sistem OCR",
       },
     ],
-    internalNotes: ["Buyer menunggu revisi dokumen komersial sebelum PO final."],
+    internalNotes: ["Buyer menunggu revisi invoice sebelum PO final."],
   }),
-  createCase({
-    id: "case-rotan-solo",
-    user: {
-      nama: "Budi Hartono",
-      email: "budi@rotansolo.id",
-      hp: "0812-7788-2200",
-    },
-    profile: {
-      namaUsaha: "Rotan Solo Lestari",
-      kota: "Sukoharjo",
-      provinsi: "Jawa Tengah",
-      tahunBerdiri: "2017",
-      kategoriId: "furniture",
-      nomorNib: "812250013455",
-      nomorNpwp: "12.345.678.9-012.000",
-    },
-    answers: {
-      ...DEMO_ANSWERS,
-      p2_6: "b",
-      p4_4: "b",
-      p8_3: "c",
-    },
-    submittedAt: "2026-08-27T02:30:00.000Z",
+  buildCase({
+    id: "PE-202608-ROTAN",
+    businessName: "Rotan Solo Lestari",
+    ownerName: "Budi Hartono",
+    email: "budi@rotansolo.id",
+    phone: "0812-7788-2200",
+    city: "Sukoharjo",
+    kategori: "furniture",
+    nomorNib: "812250013455",
+    nomorNpwp: "12.345.678.9-012.000",
     status: "baru",
+    dataUsaha: "menunggu",
+    namaProduk: "Kursi Rotan Sintetis",
+    negaraTujuan: "Belanda",
+    hsCode: "9401.80.00",
+    nilaiEkspor: "22000",
+    submittedAt: "2026-08-27T02:30:00.000Z",
+    documents: dokumenSederhana("Rotan", 2),
     timeline: [
       {
         id: "tl-rotan-1",
         kind: "asesmen",
-        judul: "Asesmen baru masuk",
-        detail: "Skor awal 58 dari 100 dengan gap besar pada SVLK dan SOP mutu.",
+        judul: "Pengajuan ekspor dikirim",
+        detail: "Menunggu verifikasi data usaha dan dokumen.",
         tanggal: "2026-08-27T02:30:00.000Z",
         aktor: "Budi Hartono",
       },
-      ...MOCK_TIMELINE,
     ],
     internalNotes: ["Perlu konfirmasi SVLK dari pemasok utama."],
   }),
-  createCase({
-    id: "case-pangan-mandiri",
-    user: {
-      nama: "Nina Wulandari",
-      email: "nina@panganmandiri.id",
-      hp: "0813-4000-9000",
-    },
-    profile: {
-      namaUsaha: "Pangan Mandiri Sejahtera",
-      kota: "Klaten",
-      provinsi: "Jawa Tengah",
-      tahunBerdiri: "2020",
-      kategoriId: "pangan",
-      nomorNib: "812250091144",
-      nomorNpwp: "11.222.333.4-555.000",
-    },
-    answers: {
-      ...DEMO_ANSWERS,
-      p2_4: ["a", "b", "c"],
-      p3_2: "b",
-      p5_1: "c",
-      p7_1: "a",
-      p8_4: "a",
-    },
-    submittedAt: "2026-08-25T09:20:00.000Z",
+  buildCase({
+    id: "PE-202608-PANGAN",
+    businessName: "Pangan Mandiri Sejahtera",
+    ownerName: "Nina Wulandari",
+    email: "nina@panganmandiri.id",
+    phone: "0813-4000-9000",
+    city: "Klaten",
+    kategori: "fnb",
+    nomorNib: "812250091144",
+    nomorNpwp: "11.222.333.4-555.000",
     status: "disetujui",
+    dataUsaha: "disetujui",
+    namaProduk: "Keripik Buah Aneka Rasa",
+    negaraTujuan: "Singapura",
+    hsCode: "2008.99.90",
+    nilaiEkspor: "9500",
+    submittedAt: "2026-08-25T09:20:00.000Z",
+    documents: dokumenSederhana("Pangan", 4),
     timeline: [
       {
         id: "tl-pangan-1",
         kind: "asesmen",
-        judul: "Asesmen awal selesai",
-        detail: "Skor 71 dari 100 — Level 4, Hampir Siap.",
+        judul: "Pengajuan ekspor dikirim",
+        detail: "Seluruh dokumen wajib terunggah.",
         tanggal: "2026-08-25T09:20:00.000Z",
         aktor: "Nina Wulandari",
       },
       {
         id: "tl-pangan-2",
         kind: "officer",
-        judul: "Draf rekomendasi disetujui officer",
-        detail: "Seluruh dimensi utama layak diteruskan ke UMKM tanpa koreksi besar.",
+        judul: "Pengajuan disetujui officer",
+        detail: "Dokumen lengkap dan OCR cocok dengan template.",
         tanggal: "2026-08-28T05:10:00.000Z",
         aktor: "Ahmad Fauzi",
       },
     ],
-    internalNotes: ["Prioritas approval karena dokumen inti sudah lengkap."],
+    internalNotes: ["Dokumen inti sudah lengkap, prioritas approval."],
   }),
-  createCase({
-    id: "case-kosmetik-mulia",
-    user: {
-      nama: "Sinta Rahma",
-      email: "sinta@muliabeauty.id",
-      hp: "0812-9900-4400",
-    },
-    profile: {
-      namaUsaha: "Mulia Beauty Lab",
-      kota: "Surakarta",
-      provinsi: "Jawa Tengah",
-      tahunBerdiri: "2021",
-      kategoriId: "kosmetik",
-      nomorNib: "812250022900",
-      nomorNpwp: "22.333.444.5-666.000",
-    },
-    answers: {
-      ...DEMO_ANSWERS,
-      p2_4: ["z"],
-      p3_1: "c",
-      p3_2: "e",
-      p6_3: "c",
-    },
-    submittedAt: "2026-08-28T03:05:00.000Z",
+  buildCase({
+    id: "PE-202608-KOSMETIK",
+    businessName: "Mulia Beauty Lab",
+    ownerName: "Sinta Rahma",
+    email: "sinta@muliabeauty.id",
+    phone: "0812-9900-4400",
+    city: "Surakarta",
+    kategori: "kosmetik",
+    nomorNib: "812250022900",
     status: "membutuhkan_info",
+    dataUsaha: "ditolak",
+    dataUsahaCatatan: "NPWP badan usaha belum dilampirkan. Mohon lengkapi sebelum pengajuan dilanjutkan.",
+    namaProduk: "Serum Wajah Herbal",
+    negaraTujuan: "Malaysia",
+    hsCode: "3304.99.90",
+    nilaiEkspor: "6000",
+    submittedAt: "2026-08-28T03:05:00.000Z",
+    documents: dokumenSederhana("Kosmetik", 1),
     timeline: [
       {
         id: "tl-kosmetik-1",
         kind: "asesmen",
-        judul: "Asesmen diselesaikan",
-        detail: "Skor 49 dari 100 — Level 2, Tahap Awal.",
+        judul: "Pengajuan ekspor dikirim",
+        detail: "Data NPWP belum lengkap.",
         tanggal: "2026-08-28T03:05:00.000Z",
         aktor: "Sinta Rahma",
       },
       {
         id: "tl-kosmetik-2",
         kind: "officer",
-        judul: "Permintaan info tambahan dikirim",
-        detail: "Officer meminta komposisi dan foto kemasan untuk verifikasi Lartas.",
+        judul: "Officer meminta info tambahan",
+        detail: "Perlu NPWP badan usaha dan komposisi produk untuk cek Lartas.",
         tanggal: "2026-08-29T01:10:00.000Z",
         aktor: "Retno Wulandari",
       },
     ],
-    internalNotes: ["Perlu komposisi lengkap dan file label produk."],
+    internalNotes: ["Menunggu NPWP badan dan file komposisi produk."],
   }),
-  createCase({
-    id: "case-herbal-bumi",
-    user: {
-      nama: "Agus Prasetyo",
-      email: "agus@bumiherbal.id",
-      hp: "0813-7070-2201",
-    },
-    profile: {
-      namaUsaha: "Bumi Herbal Nusantara",
-      kota: "Karanganyar",
-      provinsi: "Jawa Tengah",
-      tahunBerdiri: "2018",
-      kategoriId: "herbal",
-      nomorNib: "812250090900",
-      nomorNpwp: "33.444.555.6-777.000",
-    },
-    answers: {
-      ...DEMO_ANSWERS,
-      p1_4: "c",
-      p4_1: "c",
-      p5_2: "c",
-      p7_3: "c",
-    },
-    submittedAt: "2026-08-29T01:05:00.000Z",
+  buildCase({
+    id: "PE-202608-HERBAL",
+    businessName: "Bumi Herbal Nusantara",
+    ownerName: "Agus Prasetyo",
+    email: "agus@bumiherbal.id",
+    phone: "0813-7070-2201",
+    city: "Karanganyar",
+    kategori: "herbal",
+    nomorNib: "812250090900",
+    nomorNpwp: "33.444.555.6-777.000",
     status: "baru",
+    dataUsaha: "menunggu",
+    namaProduk: "Jamu Instan Temulawak",
+    negaraTujuan: "Belanda",
+    hsCode: "2106.90.99",
+    nilaiEkspor: "8000",
+    submittedAt: "2026-08-29T01:05:00.000Z",
+    documents: dokumenSederhana("Herbal", 3),
     timeline: [
       {
         id: "tl-herbal-1",
         kind: "asesmen",
-        judul: "Asesmen baru dibuat",
-        detail: "Skor 62 dari 100 — fokus pada kepabeanan dan pemasaran.",
+        judul: "Pengajuan ekspor dikirim",
+        detail: "Menunggu giliran review officer.",
         tanggal: "2026-08-29T01:05:00.000Z",
         aktor: "Agus Prasetyo",
       },
@@ -347,24 +451,29 @@ export const ADMIN_CASES: ApplicationCase[] = [
   }),
 ];
 
+/* ---------- Ringkasan ---------- */
+
 export function summarizeCases(cases: ApplicationCase[]) {
-  const total = cases.length;
-  const baru = cases.filter((item) => item.status === "baru").length;
-  const direview = cases.filter((item) => item.status === "direview").length;
-  const disetujui = cases.filter((item) => item.status === "disetujui").length;
-  const membutuhkanInfo = cases.filter((item) => item.status === "membutuhkan_info").length;
-
-  return { total, baru, direview, disetujui, membutuhkanInfo };
+  return {
+    total: cases.length,
+    baru: cases.filter((item) => item.status === "baru").length,
+    direview: cases.filter((item) => item.status === "direview").length,
+    disetujui: cases.filter((item) => item.status === "disetujui").length,
+    membutuhkanInfo: cases.filter((item) => item.status === "membutuhkan_info").length,
+    ditolak: cases.filter((item) => item.status === "ditolak").length,
+  };
 }
 
-export function readinessBuckets(cases: ApplicationCase[]) {
-  const buckets = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } as Record<1 | 2 | 3 | 4 | 5, number>;
+export const STATUS_LABEL: Record<ReviewStage, string> = {
+  baru: "Baru",
+  direview: "Sedang direview",
+  disetujui: "Disetujui",
+  membutuhkan_info: "Butuh info tambahan",
+  ditolak: "Ditolak",
+};
 
-  for (const item of cases) buckets[item.readinessLevel] += 1;
-
-  return buckets;
-}
-
-export function levelLabel(level: number) {
-  return LEVELS[level as keyof typeof LEVELS]?.nama ?? `Level ${level}`;
-}
+export const DATA_USAHA_LABEL: Record<ApplicationCase["dataUsaha"], string> = {
+  menunggu: "Menunggu verifikasi",
+  disetujui: "Disetujui",
+  ditolak: "Ditolak",
+};

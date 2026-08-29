@@ -34,7 +34,7 @@ export function WhatsAppDraftPanel({ caseItem }: { caseItem: ApplicationCase }) 
   };
 
   return (
-    <Card className="border-slate-200">
+    <Card className="border-gray-200">
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -84,7 +84,7 @@ export function WhatsAppDraftPanel({ caseItem }: { caseItem: ApplicationCase }) 
           </Button>
         </div>
 
-        <p className="text-xs leading-relaxed text-slate-500">
+        <p className="text-xs leading-relaxed text-gray-500">
           Draf dibuat dari data internal case ini saja. Officer bertanggung jawab penuh atas
           isi pesan yang benar-benar dikirim.
         </p>

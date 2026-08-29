@@ -38,8 +38,52 @@ export interface BusinessProfile {
   kategoriLainnya?: string;
   punyaNib?: "aktif" | "proses" | "belum";
   nomorNib?: string;
+  fileNib?: string | null;
   statusNpwp?: "badan" | "pribadi" | "belum";
   nomorNpwp?: string;
+  fileNpwp?: string | null;
+}
+
+/** Status persetujuan data usaha oleh officer (fitur baru). */
+export type BusinessApprovalStatus = "menunggu" | "disetujui" | "ditolak";
+
+export type PengajuanStatus = "draft" | "review" | "revisi" | "ditolak" | "selesai";
+
+export interface PengajuanEkspor {
+  id: string;
+  tanggal: string;
+  namaProduk: string;
+  hsCode: string;
+  nilaiEkspor: string;
+  pembeli: string;
+  negaraTujuan: string;
+  tanggalKirim: string;
+  status: PengajuanStatus;
+  dokumen: DocumentItem[];
+  /** Catatan petugas saat pengajuan diminta revisi atau ditolak. */
+  catatanReview?: string;
+}
+
+/* ---------- Konsultasi (ticketing) ---------- */
+
+export type TicketStatus = "menunggu" | "dijawab" | "selesai";
+
+export interface TicketMessage {
+  id: string;
+  dari: "umkm" | "petugas";
+  aktor: string;
+  pesan: string;
+  tanggal: string;
+}
+
+export interface ConsultationTicket {
+  id: string;
+  judul: string;
+  kategori: string;
+  status: TicketStatus;
+  dibuat: string;
+  diperbarui: string;
+  pesan: TicketMessage[];
 }
 
 export interface User {
@@ -52,6 +96,9 @@ export interface User {
 
 export type AppRole = "user" | "officer" | "super_admin";
 
+/** Peran admin — dipakai untuk login, RBAC, dan CRUD akun. */
+export type AdminRole = Exclude<AppRole, "user">;
+
 export type ReviewStage =
   | "baru"
   | "direview"
@@ -63,34 +110,10 @@ export interface AdminAccount {
   id: string;
   nama: string;
   email: string;
-  role: Exclude<AppRole, "user">;
-  jabatan: string;
+  role: AdminRole;
   aktif: boolean;
   passwordResetAt?: string;
   lastLoginAt?: string;
-}
-
-/** Tingkat keyakinan AI terhadap satu dimensi (fitur C2). */
-export type AiConfidence = "tinggi" | "sedang" | "rendah";
-
-export interface ReviewDimension {
-  id: string;
-  label: string;
-  pillarId: number;
-  aiScore: number;
-  aiDraft: string;
-  /** Alasan AI menyimpulkan skor/draf ini — fitur C1 Explainability. */
-  aiReason?: string;
-  /** Seberapa yakin AI pada dimensi ini — fitur C2. */
-  aiConfidence?: AiConfidence;
-  /** Kenapa confidence-nya seperti itu (mis. data asesmen kurang). */
-  confidenceReason?: string;
-  officerScore: number;
-  officerDraft: string;
-  status: ReviewStage;
-  officerNote?: string;
-  decisionReason?: string;
-  editedAt?: string;
 }
 
 export interface AuditLogEntry {
@@ -104,14 +127,10 @@ export interface AuditLogEntry {
   note?: string;
 }
 
-export interface DocumentPrecheckFinding {
-  documentId: string;
-  documentName: string;
-  field: string;
-  issue: string;
-  severity: "info" | "warning" | "critical";
-}
-
+/**
+ * Satu pengajuan ekspor UMKM yang masuk ke meja officer.
+ * Modelnya berpusat pada dokumen yang diunggah UMKM, bukan skor asesmen.
+ */
 export interface ApplicationCase {
   id: string;
   businessName: string;
@@ -120,136 +139,24 @@ export interface ApplicationCase {
   phone: string;
   city: string;
   province: string;
+  kategori: string;
   status: ReviewStage;
-  readinessLevel: LevelId;
-  readinessScore: number;
   submittedAt: string;
   lastUpdatedAt: string;
-  aiSummary: string;
-  aiDraft: string;
-  rawAnswers: AnswerMap;
-  assessment: AssessmentResult;
   profile: BusinessProfile;
+  /** Status persetujuan data usaha (NIB, NPWP, profil) oleh officer. */
+  dataUsaha: BusinessApprovalStatus;
+  dataUsahaCatatan?: string;
+  namaProduk: string;
+  negaraTujuan: string;
+  hsCode: string;
+  nilaiEkspor: string;
   documents: DocumentItem[];
-  dimensions: ReviewDimension[];
   timeline: TimelineEvent[];
   auditTrail: AuditLogEntry[];
-  precheckFindings?: DocumentPrecheckFinding[];
   internalNotes?: string[];
-  /** Draf pesan WhatsApp untuk UMKM (fitur C4). Diisi/disunting officer. */
+  /** Draf pesan WhatsApp untuk UMKM. Diisi/disunting officer. */
   waDraft?: string;
-}
-
-/* ---------- Asesmen ---------- */
-
-export interface Pillar {
-  id: number;
-  slug: string;
-  nama: string;
-  ringkas: string;
-  /** Bobot terhadap skor akhir, total = 1. */
-  bobot: number;
-  icon: string;
-}
-
-export type QuestionType = "single" | "multi";
-
-export interface QuestionOption {
-  id: string;
-  label: string;
-  /** Poin mentah untuk opsi ini. */
-  poin: number;
-}
-
-export interface Question {
-  id: string;
-  pillarId: number;
-  teks: string;
-  type: QuestionType;
-  /** Pengali bobot pertanyaan di dalam pilarnya (default 1). */
-  bobot?: number;
-  options: QuestionOption[];
-  /** Teks bantuan bahasa awam, tampil sebagai callout di bawah opsi. */
-  bantuan?: string;
-  /** Istilah glosarium yang di-highlight + tooltip pada teks pertanyaan. */
-  istilah?: string[];
-  /** Kalau diisi, pertanyaan hanya muncul untuk kategori dengan trait ini. */
-  hanyaUntukTrait?: CategoryTrait[];
-  /** Opsi "tidak ada / belum" pada multi-select — mematikan pilihan lain. */
-  opsiNolId?: string;
-}
-
-/** Jawaban: single = 1 id opsi, multi = array id opsi. */
-export type Answer = string | string[];
-export type AnswerMap = Record<string, Answer>;
-
-/* ---------- Hasil ---------- */
-
-export interface PillarScore {
-  pillarId: number;
-  skor: number; // 0-100
-  terjawab: number;
-  total: number;
-}
-
-export type LevelId = 1 | 2 | 3 | 4 | 5;
-
-export interface ReadinessLevel {
-  id: LevelId;
-  nama: string;
-  rentang: string;
-  deskripsi: string;
-  warna: string; // class tailwind teks
-  bg: string; // class tailwind background
-  border: string;
-  ring: string; // warna stroke untuk gauge
-}
-
-export interface AssessmentResult {
-  id: string;
-  tanggal: string; // ISO
-  skorTotal: number;
-  level: LevelId;
-  /** Level sebelum aturan override diterapkan (untuk transparansi). */
-  levelSebelumOverride: LevelId;
-  overrides: string[];
-  pilar: PillarScore[];
-  flagPetugas: string[];
-}
-
-/* ---------- Rekomendasi ---------- */
-
-export type OfficerStatus =
-  | "pending_review"
-  | "approved"
-  | "edited"
-  | "needs_more_info";
-
-export interface OfficerReview {
-  status: OfficerStatus;
-  namaPetugas?: string;
-  tanggal?: string;
-  catatan?: string;
-  /** Versi asli AI, diisi hanya bila status = "edited". */
-  versiAsliAI?: string;
-  versiPetugas?: string;
-}
-
-export interface Recommendation {
-  id: string;
-  judul: string;
-  pillarId: number;
-  ringkas: string;
-  mengapa: string;
-  langkah: string[];
-  effort: 1 | 2 | 3;
-  estimasi: string;
-  prioritas: number;
-  referensi: { label: string; url: string }[];
-  review: OfficerReview;
-  selesai?: boolean;
-  /** Muncul sebagai rekomendasi bila jawaban pertanyaan ini bernilai rendah. */
-  pemicu?: { questionId: string; opsiId: string[] };
 }
 
 /* ---------- Dokumen ---------- */
@@ -263,8 +170,36 @@ export interface DocumentItem {
   wajib: boolean;
   status: DocStatus;
   namaFile?: string;
+  /** URL/data-URI berkas PDF yang diunggah UMKM — dipakai admin untuk melihat isi. */
+  fileUrl?: string;
   tanggal?: string;
   catatanPetugas?: string;
+  /** Hasil pembacaan OCR + pencocokan terhadap template contoh. */
+  ocr?: DocumentOcrResult;
+}
+
+/* ---------- OCR / pencocokan dokumen ---------- */
+
+export type OcrStatus = "cocok" | "perlu_perbaikan" | "gagal_baca" | "belum_dibaca";
+
+export interface OcrFieldCheck {
+  field: string;
+  /** Nilai yang terbaca dari PDF yang diunggah. */
+  terbaca: string;
+  /** Nilai yang diharapkan menurut template contoh / data usaha. */
+  diharapkan: string;
+  sesuai: boolean;
+  catatan?: string;
+}
+
+export interface DocumentOcrResult {
+  status: OcrStatus;
+  /** Ringkasan satu kalimat untuk admin. */
+  ringkas: string;
+  diperiksaPada: string;
+  /** Nama template contoh yang dijadikan acuan. */
+  template: string;
+  temuan: OcrFieldCheck[];
 }
 
 /* ---------- Riwayat / Timeline ---------- */
@@ -303,4 +238,44 @@ export interface GlossaryEntry {
   istilah: string;
   kepanjangan?: string;
   penjelasan: string;
+}
+
+/* ---------- Panduan CMS ---------- *
+ * Konten panduan yang dikelola admin lewat CMS sederhana.
+ * Satu daftar rata; `tipe` membedakan tahap alur dan panduan dokumen.
+ */
+
+export type PanduanTipe = "tahap" | "dokumen";
+export type PanduanStatus = "terbit" | "draf";
+
+export interface PanduanLangkah {
+  judul: string;
+  detail: string;
+}
+
+export interface PanduanTautan {
+  teks: string;
+  url: string;
+}
+
+export interface PanduanEntry {
+  id: string;
+  tipe: PanduanTipe;
+  judul: string;
+  /** Subjudul / inti singkat. */
+  ringkas: string;
+  /** Paragraf penjelasan (terutama untuk dokumen). */
+  deskripsi: string;
+  /** Poin ringkas berupa daftar (dipakai tahap alur). */
+  poin: string[];
+  /** Langkah bernomor (dipakai panduan dokumen). */
+  langkah: PanduanLangkah[];
+  tautan: PanduanTautan[];
+  /** Untuk dokumen: dibuat sendiri oleh eksportir vs diurus ke instansi. */
+  dibuatSendiri: boolean;
+  /** Urutan tampil (kecil = atas). */
+  urutan: number;
+  status: PanduanStatus;
+  /** Entri inti bawaan — boleh disunting, tidak boleh dihapus. */
+  terkunci: boolean;
 }

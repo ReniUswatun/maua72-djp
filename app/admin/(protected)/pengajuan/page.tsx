@@ -1,31 +1,23 @@
 "use client";
 
 import { AdminCasesTable } from "@/components/admin/AdminCasesTable";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAdminStore } from "@/store/admin-store";
 
 export default function AdminApplicationsPage() {
   const cases = useAdminStore((s) => s.cases);
 
   return (
-    <div className="space-y-6">
-      <Card className="border-slate-200">
-        <CardHeader>
-          <Badge tone="primary" className="w-fit">Monitoring</Badge>
-          <CardTitle className="text-2xl">Daftar Pengajuan UMKM</CardTitle>
-          <CardDescription>
-            Semua data case disajikan sebagai sumber tunggal untuk officer review dan reporting.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="max-w-3xl text-sm leading-relaxed text-slate-600">
-            Gunakan pencarian, filter status, filter level, dan sorting untuk menemukan pengajuan yang perlu ditangani terlebih dahulu.
-          </p>
-        </CardContent>
-      </Card>
+    <div className="space-y-8">
+      <div>
+        <p className="eyebrow">Ruang Kerja Officer</p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight">Daftar pengajuan ekspor</h1>
+        <p className="mt-2 max-w-2xl leading-relaxed text-gray-600">
+          Cari, saring, dan urutkan untuk menemukan pengajuan yang perlu ditangani lebih dulu.
+          Dokumen dan catatan OCR dibuka per pengajuan lewat tombol Buka.
+        </p>
+      </div>
 
-      <AdminCasesTable cases={cases} title="Tabel Pengajuan" description="Daftar operasional untuk membuka detail review." />
+      <AdminCasesTable cases={cases} title="Semua Pengajuan" description="Klik Buka untuk melihat dokumen, data usaha, dan mengambil keputusan." />
     </div>
   );
 }

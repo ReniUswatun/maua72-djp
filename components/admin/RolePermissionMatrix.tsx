@@ -1,12 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { RotateCcw, ShieldHalf } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   LOCKED_ROLES,
   PERMISSION_GROUPS,
@@ -26,20 +25,18 @@ export function RolePermissionMatrix() {
   const [feedback, setFeedback] = React.useState<string | null>(null);
 
   return (
-    <div className="space-y-6">
-      <Card className="border-slate-200">
-        <CardHeader>
-          <Badge tone="primary" className="w-fit">
-            <ShieldHalf className="h-3.5 w-3.5" aria-hidden />
-            RBAC
-          </Badge>
-          <CardTitle className="text-2xl">Hak Akses per Peran</CardTitle>
-          <CardDescription>
-            Centang izin yang dimiliki tiap peran. Perubahan langsung berlaku: menu
-            disembunyikan sekaligus halaman terkait diblokir untuk peran tanpa izin.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <div className="space-y-8">
+      <div>
+        <p className="eyebrow">Super Admin</p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight">Hak akses per peran</h1>
+        <p className="mt-2 max-w-2xl leading-relaxed text-gray-600">
+          Centang izin yang dimiliki tiap peran. Perubahan langsung berlaku — menu disembunyikan
+          sekaligus halamannya diblokir untuk peran tanpa izin.
+        </p>
+      </div>
+
+      <Card className="border-gray-200">
+        <CardContent className="space-y-4 p-6">
           <Alert tone="neutral">
             Peran <span className="font-semibold">Super Admin</span> selalu memiliki akses penuh
             dan tidak dapat dikurangi, agar tidak ada yang mengunci diri dari sistem.
@@ -64,13 +61,13 @@ export function RolePermissionMatrix() {
       </Card>
 
       {PERMISSION_GROUPS.map((group) => (
-        <Card key={group.judul} className="border-slate-200">
+        <Card key={group.judul} className="border-gray-200">
           <CardHeader>
             <CardTitle className="text-lg">{group.judul}</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="text-xs uppercase tracking-[0.14em] text-slate-500">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="text-xs uppercase tracking-[0.14em] text-gray-500">
                 <tr>
                   <th className="px-3 py-3 text-left">Izin</th>
                   {ROLES.map((role) => (
@@ -80,12 +77,12 @@ export function RolePermissionMatrix() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-gray-200">
                 {group.permissions.map((permission: Permission) => (
                   <tr key={permission}>
-                    <td className="px-3 py-3 text-slate-700">
-                      <p className="font-medium text-slate-900">{PERMISSION_LABELS[permission]}</p>
-                      <p className="text-xs text-slate-400">{permission}</p>
+                    <td className="px-3 py-3 text-gray-700">
+                      <p className="font-medium text-gray-900">{PERMISSION_LABELS[permission]}</p>
+                      <p className="text-xs text-gray-400">{permission}</p>
                     </td>
                     {ROLES.map((role) => {
                       const checked = roleCan(rolePermissions, role, permission);
@@ -94,7 +91,7 @@ export function RolePermissionMatrix() {
                         <td key={role} className="px-3 py-3 text-center">
                           <input
                             type="checkbox"
-                            className="h-5 w-5 rounded border-slate-300 text-primary-700 focus:ring-primary-500 disabled:opacity-50"
+                            className="h-5 w-5 rounded border-gray-300 text-primary-700 focus:ring-primary-500 disabled:opacity-50"
                             checked={checked}
                             disabled={locked}
                             aria-label={`${PERMISSION_LABELS[permission]} untuk ${role}`}

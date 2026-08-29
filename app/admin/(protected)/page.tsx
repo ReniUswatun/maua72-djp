@@ -1,28 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { AlarmClock, ArrowRight, ClipboardCheck, Clock3, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { AlarmClock, ArrowRight, BadgeCheck, ClipboardCheck, Clock3, ScanLine, ShieldCheck, Sparkles } from "lucide-react";
 
 import { AdminCasesTable } from "@/components/admin/AdminCasesTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { levelLabel, readinessBuckets } from "@/lib/admin-data";
+import { computeOcrAccuracy } from "@/lib/ai-accuracy";
+import { DATA_USAHA_LABEL, STATUS_LABEL } from "@/lib/admin-data";
 import { countOverdue, SLA_LIMIT_DAYS } from "@/lib/sla";
 import { formatTanggalPendek } from "@/lib/utils";
 import { useAdminStore, useAdminSummary } from "@/store/admin-store";
 
-function SummaryCard({ label, value, hint, icon: Icon }: { label: string; value: string | number; hint: string; icon: typeof Search }) {
+function SummaryCard({ label, value, hint, icon: Icon }: { label: string; value: string | number; hint: string; icon: typeof ClipboardCheck }) {
   return (
-    <Card className="border-slate-200 shadow-none">
+    <Card className="border-gray-200 shadow-none">
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-sm font-medium text-slate-500">{label}</p>
-            <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
-            <p className="mt-2 text-sm text-slate-600">{hint}</p>
+            <p className="text-sm font-medium text-gray-500">{label}</p>
+            <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900">{value}</p>
+            <p className="mt-2 text-sm text-gray-600">{hint}</p>
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100 text-gray-700">
             <Icon className="h-5 w-5" aria-hidden />
           </div>
         </div>
@@ -34,90 +35,115 @@ function SummaryCard({ label, value, hint, icon: Icon }: { label: string; value:
 export default function AdminDashboardPage() {
   const cases = useAdminStore((s) => s.cases);
   const summary = useAdminSummary();
-  const buckets = readinessBuckets(cases);
   const overdue = countOverdue(cases);
+  const ocr = computeOcrAccuracy(cases);
   const recent = [...cases].sort((a, b) => +new Date(b.lastUpdatedAt) - +new Date(a.lastUpdatedAt)).slice(0, 4);
+
+  const dataUsahaMenunggu = cases.filter((item) => item.dataUsaha === "menunggu").length;
 
   return (
     <div className="space-y-8">
-      <section className="grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
-        <Card className="overflow-hidden border-slate-200 bg-slate-950 text-white">
-          <CardContent className="relative p-8">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.14),_transparent_35%)]" />
-            <div className="relative max-w-2xl">
-              <Badge tone="accent" className="border-white/10 bg-white/10 text-white">Officer Monitoring</Badge>
-              <h1 className="mt-4 text-4xl font-bold tracking-tight">Monitoring Dashboard Pengajuan UMKM</h1>
-              <p className="mt-4 max-w-2xl text-base leading-relaxed text-white/75">
-                Summary pengajuan, distribusi level kesiapan, dan workspace review untuk mengubah AI Draft menjadi keputusan final officer.
-              </p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Link href="/admin/pengajuan">
-                  <Button size="lg" variant="accent">
-                    Buka Daftar Pengajuan
-                    <ArrowRight className="h-4 w-4" aria-hidden />
-                  </Button>
-                </Link>
-                <Link href="/admin/riwayat">
-                  <Button size="lg" variant="outline" className="border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white">
-                    Lihat Riwayat Lengkap
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <p className="eyebrow">Ruang Kerja Officer</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight">Monitoring pengajuan ekspor</h1>
+          <p className="mt-2 max-w-2xl leading-relaxed text-gray-600">
+            Ringkasan pengajuan, persetujuan data usaha, dan hasil pembacaan OCR dokumen —
+            untuk membantu menentukan mana yang perlu ditangani lebih dulu.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Link href="/admin/pengajuan">
+            <Button size="lg">
+              Buka Daftar Pengajuan
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Button>
+          </Link>
+          <Link href="/admin/data-usaha">
+            <Button size="lg" variant="outline">Persetujuan Data Usaha</Button>
+          </Link>
+        </div>
+      </div>
 
-        <Card className="border-slate-200">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <SummaryCard label="Total Pengajuan" value={summary.total} hint="Seluruh case aktif" icon={ClipboardCheck} />
+        <SummaryCard label="Baru" value={summary.baru} hint="Belum dibuka officer" icon={Sparkles} />
+        <SummaryCard label="Sedang direview" value={summary.direview} hint="Dalam proses review" icon={ShieldCheck} />
+        <SummaryCard label="Data usaha menunggu" value={dataUsahaMenunggu} hint="Perlu persetujuan officer" icon={BadgeCheck} />
+        <SummaryCard label="Terlambat (SLA)" value={overdue} hint={`Menunggu > ${SLA_LIMIT_DAYS} hari`} icon={AlarmClock} />
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2">
+        <Card className="border-gray-200">
           <CardHeader>
-            <CardTitle className="text-lg">Aktivitas Terbaru</CardTitle>
-            <CardDescription>Update pengajuan yang paling baru diubah.</CardDescription>
+            <CardTitle className="text-lg">Sebaran status pengajuan</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {recent.map((item) => (
-              <Link key={item.id} href={`/admin/pengajuan/${item.id}`} className="block rounded-xl border border-slate-200 p-4 transition-colors hover:border-slate-300 hover:bg-slate-50">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold text-slate-900">{item.businessName}</p>
-                  <Badge tone="neutral">{levelLabel(item.readinessLevel)}</Badge>
-                </div>
-                <p className="mt-1 text-sm text-slate-600">{item.status} · {formatTanggalPendek(item.lastUpdatedAt)}</p>
-              </Link>
+          <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            {([
+              ["baru", summary.baru],
+              ["direview", summary.direview],
+              ["disetujui", summary.disetujui],
+              ["membutuhkan_info", summary.membutuhkanInfo],
+              ["ditolak", summary.ditolak],
+            ] as const).map(([key, value]) => (
+              <div key={key} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs text-gray-500">{STATUS_LABEL[key]}</p>
+                <p className="mt-2 text-2xl font-bold text-gray-900">{value}</p>
+              </div>
             ))}
           </CardContent>
         </Card>
-      </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <SummaryCard label="Total Pengajuan" value={summary.total} hint="Seluruh case aktif pada prototipe" icon={ClipboardCheck} />
-        <SummaryCard label="Baru" value={summary.baru} hint="Belum dibuka officer" icon={Sparkles} />
-        <SummaryCard label="Direview" value={summary.direview} hint="Sedang dalam workspace review" icon={ShieldCheck} />
-        <SummaryCard label="Butuh Info" value={summary.membutuhkanInfo} hint="Menunggu pelengkapan UMKM" icon={Clock3} />
-        <SummaryCard
-          label="Terlambat (SLA)"
-          value={overdue}
-          hint={`Menunggu > ${SLA_LIMIT_DAYS} hari tanpa keputusan`}
-          icon={AlarmClock}
-        />
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">Ringkasan Level</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">Sebaran kesiapan UMKM</h2>
-          </div>
-        </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-5">
-          {([1, 2, 3, 4, 5] as const).map((level) => (
-            <div key={level} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm text-slate-500">{levelLabel(level)}</p>
-              <p className="mt-3 text-3xl font-bold text-slate-900">{buckets[level]}</p>
-              <p className="mt-2 text-sm text-slate-600">Pengajuan berada pada level ini.</p>
+        <Card className="border-gray-200">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <ScanLine className="h-4 w-4 text-gray-400" aria-hidden />
+              <CardTitle className="text-lg">Hasil OCR dokumen</CardTitle>
             </div>
-          ))}
-        </div>
+            <CardDescription>Perbandingan dokumen UMKM dengan template contoh.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs text-gray-500">Akurasi dokumen</p>
+              <p className="mt-2 text-2xl font-bold text-gray-900">{ocr.akurasiDokumen}%</p>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs text-gray-500">Dokumen dibaca</p>
+              <p className="mt-2 text-2xl font-bold text-gray-900">{ocr.diperiksa}</p>
+            </div>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-xs text-amber-700">Perlu perbaikan</p>
+              <p className="mt-2 text-2xl font-bold text-amber-900">{ocr.perluPerbaikan}</p>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs text-gray-500">Kolom sesuai</p>
+              <p className="mt-2 text-2xl font-bold text-gray-900">{ocr.akurasiField}%</p>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
-      <AdminCasesTable cases={cases} title="Monitoring Dashboard" description="Search, filter, sort, dan buka detail pengajuan dari sini." />
+      <Card className="border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-lg">Aktivitas Terbaru</CardTitle>
+          <CardDescription>Pengajuan yang paling baru diperbarui.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          {recent.map((item) => (
+            <Link key={item.id} href={`/admin/pengajuan/${item.id}`} className="block rounded-xl border border-gray-200 p-4 transition-colors hover:border-gray-300 hover:bg-gray-50">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-semibold text-gray-900">{item.businessName}</p>
+                <Badge tone="neutral">{STATUS_LABEL[item.status]}</Badge>
+              </div>
+              <p className="mt-1 text-sm text-gray-600">
+                Data usaha: {DATA_USAHA_LABEL[item.dataUsaha]} · {formatTanggalPendek(item.lastUpdatedAt)}
+              </p>
+            </Link>
+          ))}
+        </CardContent>
+      </Card>
+
+      <AdminCasesTable cases={cases} title="Daftar Pengajuan" description="Cari, filter, dan buka detail pengajuan dari sini." />
     </div>
   );
 }

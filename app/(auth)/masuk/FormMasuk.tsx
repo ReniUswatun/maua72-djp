@@ -2,33 +2,21 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { ArrowRight, Building2, PlayCircle, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, PlayCircle } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { DEMO_USER } from "@/lib/mock-data";
 import { useAppStore } from "@/store/assessment-store";
+import { useAdminStore } from "@/store/admin-store";
 
-type Peran = "umkm" | "officer" | "super_admin";
-
-const PERAN: {
-  id: Peran;
-  label: string;
-  icon: typeof Users;
-  deskripsi: string;
-}[] = [
-  {
-    id: "umkm",
-    label: "UMKM",
-    icon: Building2,
-    deskripsi: "Pemilik usaha yang ingin cek kesiapan ekspor dan menerima rekomendasi tervalidasi.",
-  },
-];
+/** Akun UMKM uji coba — memuat data demo "Kopi Merapi Nusantara". */
+const DEMO_UMKM = { email: DEMO_USER.email, password: "umkm123" };
 
 const skema = z.object({
   email: z.string().email("Format email belum benar"),
@@ -37,78 +25,63 @@ const skema = z.object({
 
 type Nilai = z.infer<typeof skema>;
 
-function parsePeran(value: string | null): Peran {
-  return "umkm";
-}
-
 export function FormMasuk() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [peran, setPeran] = React.useState<Peran>(() => parsePeran(searchParams.get("peran")));
   const [errorPesan, setErrorPesan] = React.useState<string | null>(null);
 
   const masuk = useAppStore((s) => s.masuk);
   const muatDemo = useAppStore((s) => s.muatDemo);
+  const adminLogin = useAdminStore((s) => s.login);
+  const adminAccounts = useAdminStore((s) => s.accounts);
 
   const {
     register,
     handleSubmit,
-    reset,
     formState: { errors, isSubmitting },
   } = useForm<Nilai>({ resolver: zodResolver(skema) });
-
-  React.useEffect(() => {
-    setErrorPesan(null);
-    reset();
-  }, [peran, reset]);
 
   const onSubmit = (nilai: Nilai) => {
     setErrorPesan(null);
 
-    if (peran === "umkm") {
-      masuk(nilai.email);
+    // Email + kata sandi sudah menentukan peran. Coba akun admin/officer dulu.
+    const asAdmin = adminLogin(nilai.email, nilai.password);
+    if (asAdmin.ok) {
+      router.push(asAdmin.role === "super_admin" ? "/super-admin" : "/admin");
+      return;
+    }
+
+    // Email terdaftar sebagai akun admin/officer tapi kata sandi salah.
+    const isAdminEmail = adminAccounts.some(
+      (account) => account.email.toLowerCase() === nilai.email.trim().toLowerCase(),
+    );
+    if (isAdminEmail) {
+      setErrorPesan(asAdmin.message ?? "Email atau kata sandi tidak cocok.");
+      return;
+    }
+
+    // Akun UMKM uji coba — muat data demo yang sudah terisi.
+    if (
+      nilai.email.trim().toLowerCase() === DEMO_UMKM.email.toLowerCase() &&
+      nilai.password === DEMO_UMKM.password
+    ) {
+      muatDemo();
       router.push("/dashboard");
       return;
     }
-  };
 
-  const aktif = PERAN.find((p) => p.id === peran)!;
+    // Akun UMKM lain — prototipe menerima email apa pun (belum ada backend auth).
+    masuk(nilai.email);
+    router.push("/dashboard");
+  };
 
   return (
     <div className="space-y-5">
       <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-card sm:p-8">
         <h1 className="text-2xl font-bold tracking-tight">Masuk</h1>
-        <p className="mt-2 text-sm text-gray-600">Pilih peran Anda, lalu masuk dengan akun yang sesuai.</p>
-
-        <div
-          role="tablist"
-          aria-label="Pilih peran"
-          className="mt-6 hidden grid-cols-3 gap-1.5 rounded-xl bg-gray-100 p-1.5"
-        >
-          {PERAN.map((p) => {
-            const dipilih = p.id === peran;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                role="tab"
-                aria-selected={dipilih}
-                onClick={() => setPeran(p.id)}
-                className={cn(
-                  "flex flex-col items-center gap-1 rounded-lg px-2 py-2.5 text-xs font-semibold transition-colors",
-                  dipilih
-                    ? "bg-white text-primary-800 shadow-sm"
-                    : "text-gray-500 hover:text-gray-800",
-                )}
-              >
-                <p.icon className="h-4 w-4" aria-hidden />
-                {p.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <p className="mt-3 text-xs leading-relaxed text-gray-500">{aktif.deskripsi}</p>
+        <p className="mt-2 text-sm text-gray-600">
+          Masuk dengan email dan kata sandi Anda. Sistem otomatis mengarahkan ke ruang
+          kerja sesuai peran akun.
+        </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-5" noValidate>
           <div className="space-y-2">
@@ -118,7 +91,7 @@ export function FormMasuk() {
               type="email"
               inputMode="email"
               autoComplete="email"
-              placeholder={peran === "umkm" ? "nama@usaha.id" : "nama@beacukai.go.id"}
+              placeholder="nama@usaha.id"
               aria-invalid={!!errors.email}
               {...register("email")}
             />
@@ -144,40 +117,57 @@ export function FormMasuk() {
           ) : null}
 
           <Button type="submit" full size="lg" disabled={isSubmitting}>
-            Masuk sebagai {aktif.label}
+            Masuk
             <ArrowRight className="h-4 w-4" aria-hidden />
           </Button>
         </form>
 
-        {peran === "umkm" ? (
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Belum punya akun?{" "}
-            <Link href="/daftar" className="font-semibold text-primary-700 hover:underline">
-              Daftar gratis
-            </Link>
+        <p className="mt-6 text-center text-sm text-gray-600">
+          Belum punya akun?{" "}
+          <Link href="/daftar" className="font-semibold text-primary-700 hover:underline">
+            Daftar gratis
+          </Link>
+        </p>
+
+        <details className="mt-5 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
+          <summary className="cursor-pointer font-semibold text-gray-700">
+            Akun uji coba
+          </summary>
+          <ul className="mt-3 space-y-1.5 text-gray-600">
+            <li>
+              UMKM — <code>{DEMO_UMKM.email}</code> / <code>{DEMO_UMKM.password}</code>
+            </li>
+            <li>
+              Officer — <code>ahmad.fauzi@beacukai.go.id</code> / <code>officer123</code>
+            </li>
+            <li>
+              Super Admin — <code>dewi.lestari@beacukai.go.id</code> / <code>superadmin123</code>
+            </li>
+          </ul>
+          <p className="mt-3 text-xs text-gray-500">
+            Akun UMKM lain: masukkan email apa pun dengan kata sandi bebas — prototipe belum
+            memakai autentikasi backend.
           </p>
-        ) : null}
+        </details>
       </div>
 
-      {peran === "umkm" ? (
-        <Alert tone="primary" judul="Sedang menilai prototipe ini?">
-          <p className="mb-3">
-            Masuk dengan data demo untuk langsung melihat dashboard berisi hasil asesmen,
-            rekomendasi yang sudah divalidasi petugas, dan riwayat konsultasi.
-          </p>
-          <Button
-            variant="subtle"
-            size="sm"
-            onClick={() => {
-              muatDemo();
-              router.push("/dashboard");
-            }}
-          >
-            <PlayCircle className="h-4 w-4" aria-hidden />
-            Masuk sebagai akun demo
-          </Button>
-        </Alert>
-      ) : null}
+      <Alert tone="primary" judul="Sedang menilai prototipe ini?">
+        <p className="mb-3">
+          Masuk dengan data demo untuk langsung melihat dashboard berisi hasil asesmen,
+          rekomendasi yang sudah divalidasi petugas, dan riwayat konsultasi.
+        </p>
+        <Button
+          variant="subtle"
+          size="sm"
+          onClick={() => {
+            muatDemo();
+            router.push("/dashboard");
+          }}
+        >
+          <PlayCircle className="h-4 w-4" aria-hidden />
+          Masuk sebagai akun demo
+        </Button>
+      </Alert>
     </div>
   );
 }

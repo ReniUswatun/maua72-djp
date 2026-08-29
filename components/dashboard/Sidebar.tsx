@@ -5,9 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen,
   FileStack,
-  History,
   Home,
-  ListChecks,
+  LifeBuoy,
   LogOut,
   UserRound,
 } from "lucide-react";
@@ -17,14 +16,15 @@ import { useAppStore } from "@/store/assessment-store";
 import { cn, initials } from "@/lib/utils";
 
 const MENU = [
-  { href: "/dashboard", label: "Beranda", Icon: Home },
-  { href: "/dashboard/riwayat", label: "Riwayat Konsultasi", Icon: History },
-  { href: "/panduan", label: "Panduan", Icon: BookOpen },
-  { href: "/dashboard/profil", label: "Profil", Icon: UserRound },
+  { href: "/dashboard", label: "Beranda", short: "Beranda", Icon: Home },
+  { href: "/dashboard/pengajuan", label: "Riwayat Pengajuan", short: "Pengajuan", Icon: FileStack },
+  { href: "/dashboard/riwayat", label: "Riwayat Konsultasi", short: "Konsultasi", Icon: LifeBuoy },
+  { href: "/dashboard/panduan", label: "Panduan Ekspor", short: "Panduan", Icon: BookOpen },
+  { href: "/dashboard/profil", label: "Profil", short: "Profil", Icon: UserRound },
 ];
 
-/** Menu utama di mobile — 5 item teratas ditampilkan sebagai bottom bar. */
-const MENU_MOBILE = MENU.filter((m) => m.href !== "/panduan");
+/** Menu di mobile — semua item ditampilkan sebagai bottom bar. */
+const MENU_MOBILE = MENU;
 
 function aktifkan(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
@@ -109,7 +109,7 @@ export function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur lg:hidden"
     >
       <ul className="grid grid-cols-5">
-        {MENU_MOBILE.map(({ href, label, Icon }) => {
+        {MENU_MOBILE.map(({ href, short, Icon }) => {
           const aktif = aktifkan(pathname, href);
           return (
             <li key={href}>
@@ -122,7 +122,7 @@ export function BottomNav() {
                 )}
               >
                 <Icon className="h-5 w-5" aria-hidden />
-                <span className="text-center">{label.split(" ")[0]}</span>
+                <span className="text-center">{short}</span>
               </Link>
             </li>
           );

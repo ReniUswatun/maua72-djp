@@ -1,9 +1,14 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { formatTanggal, formatTanggalPendek } from "@/lib/utils";
 import { useAdminStore } from "@/store/admin-store";
+
+const KIND_LABEL: Record<"timeline" | "audit", string> = {
+  timeline: "Aktivitas",
+  audit: "Audit",
+};
 
 type FeedEntry = {
   id: string;
@@ -45,40 +50,46 @@ export default function AdminHistoryPage() {
     .sort((a, b) => +new Date(b.date) - +new Date(a.date));
 
   return (
-    <div className="space-y-6">
-      <Card className="border-slate-200">
-        <CardHeader>
-          <Badge tone="primary" className="w-fit">Chronological History</Badge>
-          <CardTitle className="text-2xl">Timeline Seluruh UMKM</CardTitle>
-          <CardDescription>
-            Semua assessment, review, request info, approval, dan audit officer ditampilkan secara urut waktu.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm leading-relaxed text-slate-600">
-            Riwayat di sini menggabungkan event bisnis dan keputusan officer untuk memudahkan investigasi dan audit internal.
-          </p>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-4">
-        {feed.map((entry) => (
-          <Card key={`${entry.kind}-${entry.id}`} className="border-slate-200">
-            <CardContent className="p-5">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge tone={entry.kind === "audit" ? "accent" : "neutral"}>{entry.kind}</Badge>
-                <Badge tone="primary">{entry.caseId}</Badge>
-                <span className="text-xs text-slate-500">{formatTanggal(entry.date)}</span>
-              </div>
-              <h3 className="mt-3 text-lg font-semibold text-slate-900">{entry.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{entry.detail || "-"}</p>
-              <p className="mt-3 text-xs text-slate-500">
-                {entry.businessName} · oleh {entry.actor} · {formatTanggalPendek(entry.date)}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="space-y-8">
+      <div>
+        <p className="eyebrow">Ruang Kerja Officer</p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight">Riwayat &amp; jejak audit</h1>
+        <p className="mt-2 max-w-2xl leading-relaxed text-gray-600">
+          Semua kejadian pada pengajuan UMKM dan setiap keputusan petugas, tersusun dari yang
+          terbaru — untuk memudahkan menelusuri kembali.
+        </p>
       </div>
+
+      {feed.length === 0 ? (
+        <Card className="border-gray-200">
+          <CardContent className="p-8 text-center text-sm text-gray-500">Belum ada aktivitas.</CardContent>
+        </Card>
+      ) : (
+        <ol className="relative space-y-4 border-l border-gray-200 pl-6">
+          {feed.map((entry) => (
+            <li key={`${entry.kind}-${entry.id}`} className="relative">
+              <span
+                className={`absolute -left-[1.9rem] mt-1.5 h-3 w-3 rounded-full ring-4 ring-gray-50 ${
+                  entry.kind === "audit" ? "bg-accent-500" : "bg-primary-400"
+                }`}
+                aria-hidden
+              />
+              <div className="rounded-xl border border-gray-200 bg-white p-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={entry.kind === "audit" ? "accent" : "neutral"}>{KIND_LABEL[entry.kind]}</Badge>
+                  <Badge tone="primary">{entry.caseId}</Badge>
+                  <span className="text-xs text-gray-400">{formatTanggal(entry.date)}</span>
+                </div>
+                <h3 className="mt-2 text-base font-semibold text-gray-900">{entry.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-gray-600">{entry.detail || "—"}</p>
+                <p className="mt-2 text-xs text-gray-400">
+                  {entry.businessName} · oleh {entry.actor} · {formatTanggalPendek(entry.date)}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }

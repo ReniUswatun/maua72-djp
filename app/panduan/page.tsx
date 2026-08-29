@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 
 import { Footer } from "@/components/landing/Footer";
 import { Navbar } from "@/components/shared/Navbar";
-import { PanduanHub } from "./PanduanHub";
+import { PanduanReader } from "@/components/panduan/PanduanReader";
 
 export const metadata: Metadata = {
   title: "Panduan Ekspor",
   description:
-    "Kumpulan panduan ekspor bahasa awam: legalitas, HS Code, dokumen PEB, Lartas, logistik, dan pembayaran.",
+    "Satu panduan ekspor runtut dari nol sampai barang berangkat: setiap tahap, dokumen yang dibutuhkan, dan cara mendapatkan tiap dokumen.",
 };
 
 export default function PanduanPage() {
@@ -15,7 +15,7 @@ export default function PanduanPage() {
     <>
       <Navbar />
       <main id="konten-utama">
-        <PanduanHub />
+        <PanduanReader />
       </main>
       <Footer />
     </>
