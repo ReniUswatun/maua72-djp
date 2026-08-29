@@ -91,17 +91,29 @@ export function FormMasuk() {
           asesmen, rekomendasi yang sudah divalidasi petugas, dan riwayat
           konsultasi.
         </p>
-        <Button
-          variant="subtle"
-          size="sm"
-          onClick={() => {
-            muatDemo();
-            router.push("/dashboard");
-          }}
-        >
-          <PlayCircle className="h-4 w-4" aria-hidden />
-          Masuk sebagai akun demo
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button
+            variant="subtle"
+            size="sm"
+            onClick={() => {
+              muatDemo();
+              router.push("/dashboard");
+            }}
+          >
+            <PlayCircle className="h-4 w-4" aria-hidden />
+            Masuk sebagai akun demo
+          </Button>
+          <Link href="/admin/masuk">
+            <Button variant="outline" size="sm" full>
+              Masuk Officer
+            </Button>
+          </Link>
+          <Link href="/super-admin/masuk">
+            <Button variant="ghost" size="sm" full>
+              Masuk Super Admin
+            </Button>
+          </Link>
+        </div>
       </Alert>
     </div>
   );

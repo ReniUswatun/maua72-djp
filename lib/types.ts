@@ -48,6 +48,87 @@ export interface User {
   hp: string;
 }
 
+/* ---------- Admin ---------- */
+
+export type AppRole = "user" | "officer" | "super_admin";
+
+export type ReviewStage =
+  | "baru"
+  | "direview"
+  | "disetujui"
+  | "membutuhkan_info"
+  | "ditolak";
+
+export interface AdminAccount {
+  id: string;
+  nama: string;
+  email: string;
+  role: Exclude<AppRole, "user">;
+  jabatan: string;
+  aktif: boolean;
+  passwordResetAt?: string;
+  lastLoginAt?: string;
+}
+
+export interface ReviewDimension {
+  id: string;
+  label: string;
+  pillarId: number;
+  aiScore: number;
+  aiDraft: string;
+  officerScore: number;
+  officerDraft: string;
+  status: ReviewStage;
+  officerNote?: string;
+  decisionReason?: string;
+  editedAt?: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  officer: string;
+  action: string;
+  field?: string;
+  before?: string;
+  after?: string;
+  note?: string;
+}
+
+export interface DocumentPrecheckFinding {
+  documentId: string;
+  documentName: string;
+  field: string;
+  issue: string;
+  severity: "info" | "warning" | "critical";
+}
+
+export interface ApplicationCase {
+  id: string;
+  businessName: string;
+  ownerName: string;
+  email: string;
+  phone: string;
+  city: string;
+  province: string;
+  status: ReviewStage;
+  readinessLevel: LevelId;
+  readinessScore: number;
+  submittedAt: string;
+  lastUpdatedAt: string;
+  aiSummary: string;
+  aiDraft: string;
+  rawAnswers: AnswerMap;
+  assessment: AssessmentResult;
+  profile: BusinessProfile;
+  documents: DocumentItem[];
+  dimensions: ReviewDimension[];
+  timeline: TimelineEvent[];
+  auditTrail: AuditLogEntry[];
+  precheckFindings?: DocumentPrecheckFinding[];
+  internalNotes?: string[];
+}
+
 /* ---------- Asesmen ---------- */
 
 export interface Pillar {
