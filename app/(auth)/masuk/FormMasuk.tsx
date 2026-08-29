@@ -12,7 +12,6 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { useAdminStore } from "@/store/admin-store";
 import { useAppStore } from "@/store/assessment-store";
 
 type Peran = "umkm" | "officer" | "super_admin";
@@ -29,18 +28,6 @@ const PERAN: {
     icon: Building2,
     deskripsi: "Pemilik usaha yang ingin cek kesiapan ekspor dan menerima rekomendasi tervalidasi.",
   },
-  {
-    id: "officer",
-    label: "Officer",
-    icon: ShieldCheck,
-    deskripsi: "Petugas Bea Cukai yang meninjau pengajuan, memperbaiki draf AI, dan mengambil keputusan.",
-  },
-  {
-    id: "super_admin",
-    label: "Super Admin",
-    icon: Users,
-    deskripsi: "Pengelola sistem: akun officer, hak akses peran, log aktivitas, dan metrik AI.",
-  },
 ];
 
 const skema = z.object({
@@ -51,8 +38,6 @@ const skema = z.object({
 type Nilai = z.infer<typeof skema>;
 
 function parsePeran(value: string | null): Peran {
-  if (value === "officer" || value === "super_admin" || value === "umkm") return value;
-  if (value === "admin") return "officer";
   return "umkm";
 }
 
@@ -64,7 +49,6 @@ export function FormMasuk() {
 
   const masuk = useAppStore((s) => s.masuk);
   const muatDemo = useAppStore((s) => s.muatDemo);
-  const loginAdmin = useAdminStore((s) => s.login);
 
   const {
     register,
@@ -86,13 +70,6 @@ export function FormMasuk() {
       router.push("/dashboard");
       return;
     }
-
-    const hasil = loginAdmin(nilai.email, nilai.password, peran);
-    if (!hasil.ok) {
-      setErrorPesan(hasil.message ?? "Login gagal.");
-      return;
-    }
-    router.push(peran === "super_admin" ? "/super-admin" : "/admin");
   };
 
   const aktif = PERAN.find((p) => p.id === peran)!;
@@ -106,7 +83,7 @@ export function FormMasuk() {
         <div
           role="tablist"
           aria-label="Pilih peran"
-          className="mt-6 grid grid-cols-3 gap-1.5 rounded-xl bg-gray-100 p-1.5"
+          className="mt-6 hidden grid-cols-3 gap-1.5 rounded-xl bg-gray-100 p-1.5"
         >
           {PERAN.map((p) => {
             const dipilih = p.id === peran;
@@ -200,23 +177,7 @@ export function FormMasuk() {
             Masuk sebagai akun demo
           </Button>
         </Alert>
-      ) : (
-        <Alert tone="primary" judul="Akun demo tersedia">
-          <p className="text-sm leading-relaxed">
-            {peran === "officer" ? (
-              <>
-                Officer: <span className="font-semibold">ahmad.fauzi@beacukai.go.id</span> /{" "}
-                <span className="font-semibold">admin123</span>
-              </>
-            ) : (
-              <>
-                Super admin: <span className="font-semibold">dewi.lestari@beacukai.go.id</span> /{" "}
-                <span className="font-semibold">super123</span>
-              </>
-            )}
-          </p>
-        </Alert>
-      )}
+      ) : null}
     </div>
   );
 }

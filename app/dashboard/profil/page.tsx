@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Check, Pencil, Sparkles } from "lucide-react";
 
-import { HelpTooltip } from "@/components/assessment/HelpTooltip";
+
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
@@ -13,7 +13,6 @@ import {
   categoryLabel,
   getCategory,
 } from "@/lib/business-categories";
-import { conditionalQuestionCount } from "@/lib/assessment-config";
 import type { BusinessProfile } from "@/lib/types";
 import { useAppStore } from "@/store/assessment-store";
 
@@ -237,7 +236,7 @@ export default function ProfilPage() {
                 <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                   {f.istilah ? (
                     <span className="inline-flex items-center gap-1">
-                      {f.k} <HelpTooltip istilah={f.istilah} />
+                      {f.k}
                     </span>
                   ) : (
                     f.k
@@ -250,35 +249,6 @@ export default function ProfilPage() {
         )}
       </section>
 
-      <Alert
-        tone="accent"
-        icon={<Sparkles className="h-5 w-5 text-accent-600" aria-hidden />}
-        judul="Bagaimana kategori memengaruhi asesmen Anda"
-      >
-        Kategori{" "}
-        <strong>
-          {categoryLabel((profile || draf).kategoriId, (profile || draf).kategoriLainnya)}
-        </strong>{" "}
-        memunculkan {conditionalQuestionCount(profile || draf)} pertanyaan tambahan yang
-        tidak ditanyakan ke kategori lain
-        {traits.length > 0
-          ? ` — antara lain menyangkut ${traits
-              .map(
-                (t) =>
-                  ({
-                    pangan: "izin edar dan sertifikat halal",
-                    kosmetik: "izin edar BPOM",
-                    herbal: "izin obat tradisional",
-                    hayati: "sertifikat karantina",
-                    kayu: "legalitas kayu (SVLK)",
-                    tekstil: "standar mutu tekstil",
-                    digital: "kekayaan intelektual",
-                  })[t],
-              )
-              .join(", ")}`
-          : ""}
-        .
-      </Alert>
     </div>
   );
 }

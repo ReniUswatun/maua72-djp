@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
 
-import { HelpTooltip } from "@/components/assessment/HelpTooltip";
+
 import { Footer } from "@/components/landing/Footer";
 import { DisclaimerBanner } from "@/components/shared/DisclaimerBanner";
 import { Navbar } from "@/components/shared/Navbar";
@@ -67,7 +67,9 @@ export default function ArtikelPage({ params }: { params: { slug: string } }) {
               </p>
               <p className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
                 {artikel.istilahTerkait.map((i) => (
-                  <HelpTooltip key={i} istilah={i} />
+                  <span key={i} className="rounded bg-gray-200 px-2 py-1 font-semibold text-gray-700">
+                    {i}
+                  </span>
                 ))}
               </p>
             </div>
@@ -105,21 +107,7 @@ export default function ArtikelPage({ params }: { params: { slug: string } }) {
             <DisclaimerBanner />
           </div>
 
-          <div className="mt-10 rounded-xl border border-primary-100 bg-primary-50 p-6 sm:p-8">
-            <h2 className="text-xl font-semibold text-primary-900">
-              Ingin tahu posisi usaha Anda sekarang?
-            </h2>
-            <p className="mt-2 leading-relaxed text-primary-900/80">
-              Asesmen kesiapan ekspor menunjukkan gap mana yang paling
-              menentukan, lengkap dengan langkah yang ditinjau petugas.
-            </p>
-            <Link href="/daftar" className="mt-5 inline-block">
-              <Button>
-                Mulai Asesmen Gratis
-                <ArrowRight className="h-4 w-4" aria-hidden />
-              </Button>
-            </Link>
-          </div>
+
 
           <section className="mt-14">
             <h2 className="text-xl font-semibold">Panduan lainnya</h2>

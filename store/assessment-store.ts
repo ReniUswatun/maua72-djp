@@ -3,39 +3,53 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-import { buatRekomendasi } from "@/lib/recommendations";
-import { hitungHasil } from "@/lib/scoring";
-import {
-  DEMO_ANSWERS,
-  DEMO_PROFILE,
-  DEMO_RIWAYAT_ASESMEN,
-  DEMO_USER,
-  MOCK_DOCUMENTS,
-  MOCK_OFFICER_REVIEWS,
-  MOCK_TIMELINE,
-} from "@/lib/mock-data";
+import { DEMO_PROFILE, DEMO_USER, MOCK_TIMELINE } from "@/lib/mock-data";
 import type {
-  Answer,
-  AnswerMap,
-  AssessmentResult,
   BusinessProfile,
   DocumentItem,
-  Recommendation,
+  PengajuanEkspor,
   TimelineEvent,
   User,
 } from "@/lib/types";
+
+// Default transactional documents for a submission
+const DEFAULT_DOCUMENTS: DocumentItem[] = [
+  {
+    id: "doc-invoice",
+    nama: "Commercial Invoice",
+    keterangan: "Faktur komersial yang diterbitkan oleh Anda untuk pembeli di luar negeri.",
+    wajib: true,
+    status: "belum",
+  },
+  {
+    id: "doc-packing",
+    nama: "Packing List",
+    keterangan: "Rincian spesifikasi barang dan kemasan.",
+    wajib: true,
+    status: "belum",
+  },
+  {
+    id: "doc-peb",
+    nama: "Pemberitahuan Ekspor Barang (PEB)",
+    keterangan: "Dokumen pabean yang disetujui Bea Cukai (NPE).",
+    wajib: true,
+    status: "belum",
+  },
+  {
+    id: "doc-ska",
+    nama: "Sertifikat Keterangan Asal (SKA)",
+    keterangan: "Certificate of Origin (Optional).",
+    wajib: false,
+    status: "belum",
+  },
+];
 
 interface AppState {
   /* ---- data ---- */
   user: User | null;
   profile: BusinessProfile | null;
-  answers: AnswerMap;
-  hasil: AssessmentResult | null;
-  riwayat: AssessmentResult[];
-  rekomendasi: Recommendation[];
-  dokumen: DocumentItem[];
+  pengajuan: PengajuanEkspor[];
   timeline: TimelineEvent[];
-  dikirimKePetugas: boolean;
   modeDemo: boolean;
   hydrated: boolean;
 
@@ -44,13 +58,12 @@ interface AppState {
   masuk: (email: string) => void;
   keluar: () => void;
   simpanProfil: (p: BusinessProfile) => void;
-  setJawaban: (questionId: string, jawaban: Answer) => void;
-  resetAsesmen: () => void;
-  selesaikanAsesmen: () => AssessmentResult;
-  kirimKePetugas: () => void;
-  tandaiSelesai: (id: string, selesai: boolean) => void;
-  mintaBantuan: (id: string) => void;
-  unggahDokumen: (id: string, namaFile: string) => void;
+  
+  // Pengajuan actions
+  buatPengajuan: (data: Omit<PengajuanEkspor, "id" | "status" | "dokumen" | "tanggal">) => string;
+  unggahDokumenPengajuan: (pengajuanId: string, docId: string, namaFile: string) => void;
+  kirimPengajuan: (pengajuanId: string) => void;
+
   muatDemo: () => void;
   setHydrated: () => void;
 }
@@ -58,13 +71,8 @@ interface AppState {
 const stateAwal = {
   user: null,
   profile: null,
-  answers: {} as AnswerMap,
-  hasil: null,
-  riwayat: [] as AssessmentResult[],
-  rekomendasi: [] as Recommendation[],
-  dokumen: [] as DocumentItem[],
+  pengajuan: [] as PengajuanEkspor[],
   timeline: [] as TimelineEvent[],
-  dikirimKePetugas: false,
   modeDemo: false,
 };
 
@@ -111,154 +119,109 @@ export const useAppStore = create<AppState>()(
       simpanProfil: (p) =>
         set((s) => ({
           profile: p,
-          // Checklist dokumen disiapkan sejak profil dibuat, statusnya kosong.
-          dokumen:
-            s.dokumen && s.dokumen.length > 0
-              ? s.dokumen
-              : MOCK_DOCUMENTS.map((d) => ({
-                  ...d,
-                  status: "belum" as const,
-                  namaFile: undefined,
-                  tanggal: undefined,
-                  catatanPetugas: undefined,
-                })),
+          timeline: catat(s.timeline, {
+            kind: "pesan",
+            judul: "Profil diperbarui",
+            detail: "Profil perusahaan berhasil disimpan.",
+            aktor: "Anda",
+          }),
         })),
 
-      setJawaban: (questionId, jawaban) =>
-        set((s) => ({ answers: { ...s.answers, [questionId]: jawaban } })),
-
-      resetAsesmen: () => set({ answers: {}, hasil: null, dikirimKePetugas: false }),
-
-      selesaikanAsesmen: () => {
-        const { answers, profile, hasil: sebelumnya, riwayat } = get();
-        const hasil = hitungHasil(answers, profile);
-        const rekomendasi = buatRekomendasi(answers, hasil, profile);
+      buatPengajuan: (data) => {
+        const id = `PE-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, "0")}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        const p: PengajuanEkspor = {
+          ...data,
+          id,
+          tanggal: new Date().toISOString(),
+          status: "draft",
+          dokumen: JSON.parse(JSON.stringify(DEFAULT_DOCUMENTS)), // Deep copy default docs
+        };
 
         set((s) => ({
-          hasil,
-          rekomendasi,
-          dikirimKePetugas: false,
-          riwayat: sebelumnya ? [...riwayat, sebelumnya] : riwayat,
-          dokumen: s.dokumen && s.dokumen.length > 0 ? s.dokumen : MOCK_DOCUMENTS.map((d) => ({ ...d, status: "belum", namaFile: undefined, tanggal: undefined, catatanPetugas: undefined })),
+          pengajuan: [p, ...s.pengajuan],
           timeline: catat(s.timeline, {
             kind: "asesmen",
-            judul: "Pengajuan ekspor diselesaikan",
-            detail: `Skor ${hasil.skorTotal} dari 100 — Level ${hasil.level}.`,
+            judul: `Pengajuan baru dibuat (${id})`,
+            detail: `Pengajuan untuk produk ${p.namaProduk} tujuan ${p.negaraTujuan}.`,
             aktor: "Anda",
           }),
         }));
-
-        return hasil;
+        return id;
       },
 
-      kirimKePetugas: () =>
+      unggahDokumenPengajuan: (pengajuanId, docId, namaFile) =>
         set((s) => {
-          // Simulasi hasil review petugas (blueprint §11 — nanti diganti API).
-          const rekomendasi = s.rekomendasi.map((r) => {
-            const mock = MOCK_OFFICER_REVIEWS[r.id];
-            return mock ? { ...r, review: { ...mock } } : r;
+          const pengajuanList = s.pengajuan.map((p) => {
+            if (p.id !== pengajuanId) return p;
+            return {
+              ...p,
+              dokumen: p.dokumen.map((d) =>
+                d.id === docId
+                  ? {
+                      ...d,
+                      status: "diunggah" as const,
+                      namaFile,
+                      tanggal: new Date().toISOString(),
+                      catatanPetugas: undefined,
+                    }
+                  : d
+              ),
+            };
           });
 
-          const jumlahDireview = rekomendasi.filter(
-            (r) => r.review.status !== "pending_review",
-          ).length;
-
           return {
-            dikirimKePetugas: true,
-            rekomendasi,
+            pengajuan: pengajuanList,
             timeline: catat(s.timeline, {
-              kind: "officer",
-              judul: "Rekomendasi divalidasi petugas",
-              detail: `${jumlahDireview} rekomendasi telah ditinjau oleh petugas Bea Cukai Surakarta.`,
-              aktor: "Klinik Ekspor Surakarta",
-            }),
-          };
-        }),
-
-      tandaiSelesai: (id, selesai) =>
-        set((s) => {
-          const rec = s.rekomendasi.find((r) => r.id === id);
-          return {
-            rekomendasi: s.rekomendasi.map((r) =>
-              r.id === id ? { ...r, selesai } : r,
-            ),
-            timeline: rec
-              ? catat(s.timeline, {
-                  kind: "rekomendasi",
-                  judul: selesai
-                    ? `Rekomendasi "${rec.judul}" ditandai selesai`
-                    : `Rekomendasi "${rec.judul}" dibuka kembali`,
-                  detail: selesai
-                    ? "Petugas akan meninjau kembali pada pengajuan berikutnya."
-                    : "Status dikembalikan menjadi belum selesai.",
-                  aktor: "Anda",
-                })
-              : s.timeline,
-          };
-        }),
-
-      mintaBantuan: (id) =>
-        set((s) => {
-          const rec = s.rekomendasi.find((r) => r.id === id);
-          if (!rec) return s;
-          return {
-            timeline: catat(s.timeline, {
-              kind: "pesan",
-              judul: "Permintaan bantuan dikirim",
-              detail: `Anda meminta pendampingan petugas untuk "${rec.judul}". Petugas akan menghubungi lewat WhatsApp dalam 1–2 hari kerja.`,
+              kind: "dokumen",
+              judul: `Dokumen diunggah (${pengajuanId})`,
+              detail: `Satu dokumen baru telah diunggah untuk pengajuan ${pengajuanId}.`,
               aktor: "Anda",
             }),
           };
         }),
 
-      unggahDokumen: (id, namaFile) =>
+      kirimPengajuan: (pengajuanId) =>
         set((s) => {
-          const doc = s.dokumen.find((d) => d.id === id);
+          const pengajuanList = s.pengajuan.map((p) =>
+            p.id === pengajuanId ? { ...p, status: "review" as const } : p
+          );
+
           return {
-            dokumen: s.dokumen.map((d) =>
-              d.id === id
-                ? {
-                    ...d,
-                    status: "diunggah" as const,
-                    namaFile,
-                    tanggal: new Date().toISOString(),
-                    catatanPetugas: undefined,
-                  }
-                : d,
-            ),
-            timeline: doc
-              ? catat(s.timeline, {
-                  kind: "dokumen",
-                  judul: `Dokumen "${doc.nama}" diunggah`,
-                  detail: "Menunggu verifikasi petugas Bea Cukai.",
-                  aktor: "Anda",
-                })
-              : s.timeline,
+            pengajuan: pengajuanList,
+            timeline: catat(s.timeline, {
+              kind: "officer",
+              judul: `Pengajuan dikirim (${pengajuanId})`,
+              detail: `Pengajuan berhasil dikirim dan sedang menunggu review petugas.`,
+              aktor: "Sistem",
+            }),
           };
         }),
 
       muatDemo: () => {
-        const hasil = hitungHasil(DEMO_ANSWERS, DEMO_PROFILE, "2026-08-26T04:00:00.000Z");
-        const rekomendasi = buatRekomendasi(DEMO_ANSWERS, hasil, DEMO_PROFILE).map((r) => {
-          const mock = MOCK_OFFICER_REVIEWS[r.id];
-          return mock ? { ...r, review: { ...mock } } : r;
-        });
-        rekomendasi.forEach((r) => {
-          if (r.id === "urus-nib") r.selesai = true;
-        });
+        const dummyPengajuan: PengajuanEkspor = {
+          id: "PE-202608-ABCD",
+          tanggal: "2026-08-25T10:00:00.000Z",
+          namaProduk: "Kerajinan Rotan Sintetis",
+          negaraTujuan: "Jerman",
+          hsCode: "4602.19.00",
+          nilaiEkspor: "15000",
+          pembeli: "GmbH Retailers",
+          tanggalKirim: "2026-09-15",
+          status: "review",
+          dokumen: DEFAULT_DOCUMENTS.map((d) => ({
+            ...d,
+            status: "diunggah",
+            namaFile: `${d.id}-terbaru.pdf`,
+          })),
+        };
 
         set({
           user: DEMO_USER,
-          profile: DEMO_PROFILE,
-          answers: { ...DEMO_ANSWERS },
-          hasil,
-          riwayat: [...DEMO_RIWAYAT_ASESMEN],
-          rekomendasi,
-          dokumen: MOCK_DOCUMENTS.map((d) => ({ ...d })),
+          profile: { ...DEMO_PROFILE, nomorNib: "1234567890123", nomorNpwp: "987654321" },
+          pengajuan: [dummyPengajuan],
           timeline: [...MOCK_TIMELINE].sort(
             (a, b) => +new Date(b.tanggal) - +new Date(a.tanggal),
           ),
-          dikirimKePetugas: true,
           modeDemo: true,
         });
       },
@@ -268,8 +231,8 @@ export const useAppStore = create<AppState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: ({ hydrated, ...rest }) => rest,
       onRehydrateStorage: () => (state) => state?.setHydrated(),
-    },
-  ),
+    }
+  )
 );
 
 /* Selector bantu */

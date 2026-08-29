@@ -1,189 +1,193 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowLeft, ExternalLink, FileText } from "lucide-react";
+import { notFound } from "next/navigation";
 
-const GUIDE_DATA: Record<string, { title: string; desc: string; steps: string[] }> = {
-  "doc-nib": {
-    title: "Panduan Pembuatan NIB",
-    desc: "Nomor Induk Berusaha (NIB) adalah identitas pelaku usaha yang wajib dimiliki sebelum melakukan ekspor.",
-    steps: [
-      "Siapkan KTP dan NPWP Pribadi/Badan.",
-      "Kunjungi website OSS (Online Single Submission) di oss.go.id.",
-      "Pilih 'Daftar' dan ikuti panduan pembuatan akun.",
-      "Masuk ke akun OSS Anda dan pilih menu 'Perizinan Berusaha'.",
-      "Isi data profil perusahaan dan detail usaha (pastikan KBLI sesuai).",
-      "Selesaikan proses pengajuan dan unduh NIB Anda.",
-    ],
-  },
-  "doc-npwp": {
-    title: "Panduan Pembuatan NPWP Badan",
-    desc: "NPWP (Nomor Pokok Wajib Pajak) Badan digunakan untuk keperluan administrasi perpajakan usaha Anda.",
-    steps: [
-      "Siapkan fotokopi Akta Pendirian, NIB, dan KTP direktur.",
-      "Akses ereg.pajak.go.id atau kunjungi KPP (Kantor Pelayanan Pajak) terdekat.",
-      "Isi formulir pendaftaran Wajib Pajak Badan.",
-      "Unggah atau serahkan dokumen yang dipersyaratkan.",
-      "Tunggu verifikasi dari pihak KPP.",
-      "Cetak kartu NPWP Anda.",
-    ],
-  },
-  "doc-izin": {
-    title: "Panduan Pembuatan Izin Edar (PIRT / BPOM)",
-    desc: "Izin edar memastikan produk Anda aman dikonsumsi dan memenuhi standar yang ditetapkan.",
-    steps: [
-      "Pastikan Anda memiliki NIB dan NPWP.",
-      "Untuk PIRT: Kunjungi Dinas Kesehatan setempat atau daftar melalui SPP-IRT (sppirt.pom.go.id).",
-      "Untuk BPOM: Daftarkan akun di e-reg.pom.go.id.",
-      "Unggah dokumen persyaratan (hasil uji lab, rancangan label, dll).",
-      "Tunggu proses evaluasi dan audit fasilitas.",
-      "Nomor izin edar akan diterbitkan setelah semua syarat terpenuhi.",
-    ],
-  },
-  "doc-halal": {
-    title: "Panduan Pembuatan Sertifikat Halal",
-    desc: "Sertifikat Halal diterbitkan oleh BPJPH untuk menjamin kehalalan produk Anda.",
-    steps: [
-      "Akses ptsp.halal.go.id (SIHALAL) dan buat akun.",
-      "Pilih jalur pendaftaran (Self-Declare atau Reguler).",
-      "Isi data produk, bahan baku, dan proses pengolahan.",
-      "Tunggu proses audit oleh LPH (Lembaga Pemeriksa Halal).",
-      "Fatwa Halal akan diterbitkan oleh MUI.",
-      "Unduh Sertifikat Halal dari akun SIHALAL.",
-    ],
-  },
+// Definisi panduan statis per dokumen
+const PANDUAN_DOKUMEN: Record<string, {
+  judul: string;
+  deskripsi: string;
+  sumberLuar?: { teks: string; url: string }[];
+  flowchart: string;
+  langkah: { judul: string; detail: string }[];
+}> = {
   "doc-invoice": {
-    title: "Panduan Pembuatan Commercial Invoice",
-    desc: "Commercial Invoice adalah faktur komersial yang digunakan dalam perdagangan internasional.",
-    steps: [
-      "Cantumkan identitas eksportir (Anda) dan importir (buyer).",
-      "Tuliskan nomor invoice dan tanggal penerbitan.",
-      "Deskripsikan produk secara detail (nama barang, HS Code, jumlah, harga satuan).",
-      "Tentukan Incoterms yang disepakati (misal: FOB, CIF).",
-      "Cantumkan informasi pembayaran (nomor rekening bank valas).",
-      "Tandatangani dan stempel invoice tersebut.",
+    judul: "Panduan Pembuatan Commercial Invoice",
+    deskripsi: "Commercial Invoice (Faktur Komersial) adalah dokumen utama dalam transaksi ekspor yang berisi rincian barang, nilai barang, dan pihak yang terlibat. Dokumen ini menjadi dasar perhitungan pajak dan bea masuk di negara tujuan.",
+    sumberLuar: [
+      { teks: "Template Invoice Standar (Kemendag)", url: "https://djpen.kemendag.go.id/app_frontend/links/57-template-dokumen-ekspor" },
+      { teks: "Penjelasan Lengkap Invoice Ekspor (UKM Indonesia)", url: "https://www.ukmindonesia.id/baca-deskripsi-program/dokumen-ekspor" }
     ],
+    flowchart: `
+graph TD
+    A[Terima Purchase Order dari Buyer] --> B(Siapkan Kop Surat Perusahaan)
+    B --> C(Isi Data Penjual & Pembeli)
+    C --> D(Rincikan Barang, Jumlah & Harga)
+    D --> E(Cantumkan Incoterms & Term of Payment)
+    E --> F[Tandatangani & Cap Perusahaan]
+    `,
+    langkah: [
+      { judul: "Siapkan Template Resmi", detail: "Gunakan kop surat perusahaan yang mencantumkan nama, alamat, nomor telepon, dan email perusahaan secara jelas." },
+      { judul: "Isi Data Penjual dan Pembeli", detail: "Cantumkan data Shipper/Exporter (Anda) dan Consignee/Buyer (Pembeli di luar negeri)." },
+      { judul: "Rincian Barang", detail: "Masukkan deskripsi barang, HS Code, jumlah barang, harga satuan, dan total harga (dalam valuta asing yang disepakati, misal USD)." },
+      { judul: "Incoterms & Pembayaran", detail: "Sebutkan Incoterms yang dipakai (contoh: FOB Tanjung Priok, CIF Tokyo) dan sistem pembayaran (T/T, L/C, dsb)." },
+      { judul: "Pengesahan", detail: "Invoice harus ditandatangani oleh direktur/pimpinan perusahaan dan dicap basah." }
+    ]
   },
   "doc-packing": {
-    title: "Panduan Pembuatan Packing List",
-    desc: "Packing List merincikan isi dari setiap kemasan pengiriman untuk keperluan logistik dan bea cukai.",
-    steps: [
-      "Gunakan format dasar (sama dengan Commercial Invoice).",
-      "Cantumkan nomor packing list (biasanya sama dengan nomor invoice).",
-      "Tuliskan rincian jumlah kemasan (karton, palet, dll).",
-      "Sertakan berat bersih (Net Weight) dan berat kotor (Gross Weight).",
-      "Tuliskan dimensi kemasan (Panjang x Lebar x Tinggi).",
-      "Tandatangani dan stempel packing list tersebut.",
+    judul: "Panduan Pembuatan Packing List",
+    deskripsi: "Packing list adalah dokumen yang memuat rincian fisik barang yang akan diekspor, termasuk jumlah kemasan, jenis kemasan, berat kotor (gross weight), berat bersih (net weight), dan dimensi kemasan.",
+    sumberLuar: [
+      { teks: "Template Packing List", url: "https://djpen.kemendag.go.id/app_frontend/links/57-template-dokumen-ekspor" }
     ],
+    flowchart: `
+graph TD
+    A[Barang Selesai Diproduksi & Dikemas] --> B(Timbang & Ukur Tiap Kemasan)
+    B --> C(Catat Gross Weight & Net Weight)
+    C --> D(Isi Detail Sesuai Invoice)
+    D --> E[Tandatangani & Cap Perusahaan]
+    `,
+    langkah: [
+      { judul: "Sesuaikan dengan Invoice", detail: "Nomor dan tanggal Packing List biasanya sama dengan Commercial Invoice. Data pembeli dan penjual juga harus identik." },
+      { judul: "Rincikan Kemasan", detail: "Jelaskan jenis kemasan (carton, pallet, wooden box) dan jumlahnya." },
+      { judul: "Berat dan Volume", detail: "Cantumkan berat bersih (Net Weight), berat kotor (Gross Weight), dan volume dimensi tiap kemasan." },
+      { judul: "Pengesahan", detail: "Dokumen ditandatangani oleh pimpinan perusahaan dan dicap basah." }
+    ]
   },
   "doc-ska": {
-    title: "Panduan Pembuatan SKA (Certificate of Origin)",
-    desc: "SKA membuktikan asal barang untuk mendapatkan preferensi tarif di negara tujuan.",
-    steps: [
-      "Pastikan NIB Anda sudah terdaftar untuk akses SKA.",
-      "Akses e-ska.kemendag.go.id dan login dengan akun perusahaan.",
-      "Pilih jenis formulir SKA sesuai negara tujuan.",
-      "Isi data PEB, Invoice, dan rincian produk.",
-      "Unggah dokumen pendukung (Invoice, Packing List, B/L).",
-      "Cetak SKA setelah disetujui oleh Instansi Penerbit SKA (IPSKA).",
+    judul: "Panduan Pembuatan Surat Keterangan Asal (SKA / COO)",
+    deskripsi: "SKA atau Certificate of Origin (COO) adalah dokumen yang membuktikan bahwa barang ekspor berasal dari Indonesia. Ini sering dibutuhkan untuk mendapatkan tarif bea masuk preferensi (diskon pajak) di negara tujuan.",
+    sumberLuar: [
+      { teks: "Portal e-SKA Kemendag", url: "https://eska.kemendag.go.id/" },
+      { teks: "Panduan Penggunaan e-SKA", url: "https://eska.kemendag.go.id/home/faq" }
     ],
+    flowchart: `
+graph TD
+    A[Siapkan Invoice, Packing List, PEB] --> B(Login ke Portal e-SKA Kemendag)
+    B --> C(Pilih Jenis Form SKA)
+    C --> D(Isi Data & Upload Dokumen Pendukung)
+    D --> E(Persetujuan Instansi Penerbit)
+    E --> F[Cetak SKA Resmi]
+    `,
+    langkah: [
+      { judul: "Pendaftaran Hak Akses", detail: "Daftar di portal e-SKA Kementerian Perdagangan menggunakan NIPB (Nomor Induk Kepabeanan) / NIB." },
+      { judul: "Siapkan Dokumen Pendukung", detail: "Anda memerlukan Commercial Invoice, Packing List, dan PEB yang sudah mendapat NPE (Nota Pelayanan Ekspor) dari Bea Cukai." },
+      { judul: "Pilih Form SKA", detail: "Pilih form SKA yang sesuai dengan negara tujuan dan perjanjian dagang (misal: Form D untuk ASEAN, Form E untuk Tiongkok)." },
+      { judul: "Pengisian dan Submit", detail: "Isi data barang, HS code, dan kriteria asal barang. Setelah diajukan secara online, tunggu persetujuan Instansi Penerbit SKA (IPSKA)." },
+      { judul: "Pencetakan", detail: "Setelah disetujui, SKA bisa dicetak mandiri atau diambil di kantor IPSKA terdekat." }
+    ]
   },
   "doc-peb": {
-    title: "Panduan Pembuatan PEB (Pemberitahuan Ekspor Barang)",
-    desc: "PEB adalah dokumen pabean yang wajib diajukan ke Bea Cukai sebelum barang diekspor.",
-    steps: [
-      "Pastikan Anda memiliki NIK Kepabeanan (melalui OSS).",
-      "Akses portal CEISA Bea Cukai (ceisa.customs.go.id) atau gunakan jasa PPJK.",
-      "Isi data eksportir, importir, dan data pengangkutan.",
-      "Masukkan detail barang, nilai barang, dan HS Code.",
-      "Submit dokumen PEB dan tunggu respons dari sistem CEISA.",
-      "Jika disetujui, Anda akan mendapatkan NPE (Nota Pelayanan Ekspor).",
+    judul: "Panduan Pengajuan Pemberitahuan Ekspor Barang (PEB)",
+    deskripsi: "Pemberitahuan Ekspor Barang (PEB) adalah dokumen pabean yang digunakan untuk memberitahukan pelaksanaan ekspor barang. PEB wajib diajukan ke Bea Cukai untuk setiap pengiriman ekspor.",
+    sumberLuar: [
+      { teks: "Portal INSW (Indonesia National Single Window)", url: "https://insw.go.id/" },
+      { teks: "CEISA 4.0 Bea Cukai", url: "https://portal.beacukai.go.id/" }
     ],
-  },
+    flowchart: `
+graph TD
+    A[Siapkan Invoice, Packing List, NIB] --> B(Akses CEISA 4.0 / Modul PEB)
+    B --> C(Input Data Ekspor & Nilai Barang)
+    C --> D(Submit ke Sistem Bea Cukai)
+    D --> E{Apakah Ada Pemeriksaan Fisik?}
+    E -- Ya --> F(Pemeriksaan Fisik oleh Petugas)
+    F --> G[Terbit NPE (Nota Pelayanan Ekspor)]
+    E -- Tidak --> G
+    `,
+    langkah: [
+      { judul: "Persiapan Akses", detail: "Pastikan Anda memiliki modul PEB, atau menggunakan layanan portal CEISA 4.0. Anda butuh NIB dan nomor rekening untuk bayar Bea Keluar (jika ada)." },
+      { judul: "Input Data", detail: "Masukkan detail pengirim, penerima, rincian barang, HS Code, dan nilai FOB berdasarkan Invoice dan Packing List." },
+      { judul: "Pengiriman Data (Submit)", detail: "Kirim data PEB secara elektronik ke sistem Bea Cukai. Sistem akan memvalidasi data." },
+      { judul: "Tindak Lanjut", detail: "Jika barang tidak kena lartas atau bea keluar dan profil perusahaan baik, Anda akan langsung mendapat NPE. Jika terkena random check, Bea Cukai akan melakukan pemeriksaan fisik terlebih dahulu." },
+      { judul: "Nota Pelayanan Ekspor (NPE)", detail: "NPE adalah bukti bahwa barang Anda telah diizinkan untuk dimuat ke kapal/pesawat. Bawa dokumen ini ke pelabuhan." }
+    ]
+  }
 };
 
-function renderStepText(text: string) {
-  const urlRegex = /(oss\.go\.id|ereg\.pajak\.go\.id|sppirt\.pom\.go\.id|e-reg\.pom\.go\.id|ptsp\.halal\.go\.id|e-ska\.kemendag\.go\.id|ceisa\.customs\.go\.id)/gi;
-  const parts = text.split(urlRegex);
-  
-  return parts.map((part, i) => {
-    if (part.match(urlRegex)) {
-      return (
-        <a
-          key={i}
-          href={`https://${part}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-primary-600 underline hover:text-primary-700"
-        >
-          {part}
-        </a>
-      );
-    }
-    return part;
-  });
-}
+export default function PanduanDokumenPage({ params }: { params: { id: string } }) {
+  const panduan = PANDUAN_DOKUMEN[params.id];
 
-export default function DocumentGuidePage({ params }: { params: { id: string } }) {
-  const guide = GUIDE_DATA[params.id];
-
-  if (!guide) {
+  if (!panduan) {
     notFound();
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 pt-8">
-      <div className="mx-auto max-w-3xl px-5 sm:px-6 lg:px-8">
-        <Link
-          href="/dashboard/dokumen"
-          className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Kembali ke Dokumen
-        </Link>
-        <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-10">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            {guide.title}
-          </h1>
-          <p className="mt-4 text-lg leading-relaxed text-gray-600">
-            {guide.desc}
-          </p>
+    <div className="mx-auto max-w-4xl py-8">
+      <Link
+        href="/dashboard"
+        className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Kembali ke Dashboard
+      </Link>
 
-          <div className="mt-12">
-            <h2 className="text-xl font-semibold text-gray-900">Langkah-langkah (Flowchart)</h2>
-            <div className="mt-6 space-y-8">
-              {guide.steps.map((step, index) => (
-                <div key={index} className="relative">
-                  {index !== guide.steps.length - 1 && (
-                    <div
-                      className="absolute left-[1.125rem] top-10 -ml-px h-full w-0.5 bg-gray-200"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <div className="relative flex items-start space-x-4">
-                    <div>
-                      <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 ring-8 ring-white">
-                        <span className="text-sm font-bold text-primary-700">
-                          {index + 1}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="min-w-0 flex-1 py-1.5">
-                      <p className="text-base text-gray-800">{renderStepText(step)}</p>
-                    </div>
-                  </div>
-                </div>
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-10">
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 text-primary-700">
+            <FileText className="h-6 w-6" />
+          </span>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+            {panduan.judul}
+          </h1>
+        </div>
+
+        <p className="mt-6 text-lg leading-relaxed text-gray-600">
+          {panduan.deskripsi}
+        </p>
+
+        {panduan.sumberLuar && panduan.sumberLuar.length > 0 && (
+          <div className="mt-8 rounded-xl bg-gray-50 p-6 border border-gray-100">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+              Tautan Eksternal & Referensi Resmi
+            </h2>
+            <ul className="mt-4 space-y-3">
+              {panduan.sumberLuar.map((link, i) => (
+                <li key={i}>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-2 font-medium text-primary-700 hover:text-primary-800 hover:underline"
+                  >
+                    <ExternalLink className="h-4 w-4 text-primary-500 transition-colors group-hover:text-primary-700" />
+                    {link.teks}
+                  </a>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
-          
-          <div className="mt-12 flex justify-end">
-            <Link href="/dashboard/dokumen">
-              <Button size="lg">
-                <CheckCircle2 className="mr-2 h-5 w-5" />
-                Saya Mengerti
-              </Button>
-            </Link>
+        )}
+
+        <div className="mt-12">
+          <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-2">
+            Gambaran Alur (Flowchart)
+          </h2>
+          <div className="mt-6 overflow-x-auto rounded-xl bg-slate-50 p-6 border border-slate-200">
+            {/* Mermaid.js can be rendered on the client if we have a component for it, but for a simple representation, we'll use a styled CSS-based flowchart representation for robustness since we don't have mermaid explicitly installed in nextjs components */}
+            <pre className="text-sm text-gray-700 whitespace-pre font-mono">
+              {panduan.flowchart.trim()}
+            </pre>
+            <p className="mt-4 text-xs text-gray-500 italic">
+              * (Visualisasi alur pembuatan dokumen dari awal hingga akhir)
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-12">
+          <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-2">
+            Langkah-langkah Detail
+          </h2>
+          <div className="mt-6 space-y-8">
+            {panduan.langkah.map((l, index) => (
+              <div key={index} className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white shadow-sm">
+                  {index + 1}
+                </span>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{l.judul}</h3>
+                  <p className="mt-2 leading-relaxed text-gray-600">{l.detail}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

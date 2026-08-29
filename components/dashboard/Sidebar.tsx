@@ -18,7 +18,6 @@ import { cn, initials } from "@/lib/utils";
 
 const MENU = [
   { href: "/dashboard", label: "Beranda", Icon: Home },
-  { href: "/dashboard/dokumen", label: "Dokumen Saya", Icon: FileStack },
   { href: "/dashboard/riwayat", label: "Riwayat Konsultasi", Icon: History },
   { href: "/panduan", label: "Panduan", Icon: BookOpen },
   { href: "/dashboard/profil", label: "Profil", Icon: UserRound },
@@ -139,7 +138,7 @@ export function DashboardTopbar() {
     <div className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white/95 px-5 backdrop-blur lg:hidden">
       <Logo href="/dashboard" />
       <Link
-        href="/asesmen"
+        href="/dashboard/pengajuan/baru"
         className="rounded-lg px-3 py-2 text-sm font-semibold text-primary-700 hover:bg-primary-50"
       >
         Pengajuan Ekspor
