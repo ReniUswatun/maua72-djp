@@ -258,20 +258,9 @@ function BerkasLegalitas() {
   const profile = useAppStore((s) => s.profile);
   const simpanBerkasUsaha = useAppStore((s) => s.simpanBerkasUsaha);
 
-  if (!profile) {
-    return (
-      <section className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8">
-        <h2 className="text-xl font-semibold">Berkas Legalitas</h2>
-        <p className="mt-3 text-sm text-gray-600">
-          Simpan data usaha terlebih dahulu, lalu unggah salinan PDF NIB dan NPWP di sini.
-        </p>
-      </section>
-    );
-  }
-
   const items = [
-    { jenis: "nib" as const, label: "Dokumen NIB", file: profile.fileNib, nomor: profile.nomorNib },
-    { jenis: "npwp" as const, label: "Dokumen NPWP", file: profile.fileNpwp, nomor: profile.nomorNpwp },
+    { jenis: "nib" as const, label: "Dokumen NIB", file: profile?.fileNib ?? null, nomor: profile?.nomorNib },
+    { jenis: "npwp" as const, label: "Dokumen NPWP", file: profile?.fileNpwp ?? null, nomor: profile?.nomorNpwp },
   ];
 
   return (
@@ -288,7 +277,7 @@ function BerkasLegalitas() {
             key={item.jenis}
             label={item.label}
             nomor={item.nomor}
-            file={item.file ?? null}
+            file={item.file}
             onUpload={(url) => simpanBerkasUsaha(item.jenis, url)}
             onRemove={() => simpanBerkasUsaha(item.jenis, null)}
           />

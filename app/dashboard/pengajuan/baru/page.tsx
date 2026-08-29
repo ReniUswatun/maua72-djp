@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Send } from "lucide-react";
 import Link from "next/link";
 
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/store/assessment-store";
@@ -12,6 +13,7 @@ import { useAppStore } from "@/store/assessment-store";
 export default function PengajuanBaruPage() {
   const router = useRouter();
   const buatPengajuan = useAppStore((s) => s.buatPengajuan);
+  const profile = useAppStore((s) => s.profile);
 
   const [formData, setFormData] = useState({
     namaProduk: "",
@@ -22,11 +24,14 @@ export default function PengajuanBaruPage() {
     tanggalKirim: "",
   });
 
+  const nibOk = !!(profile?.nomorNib?.trim()) && !!(profile?.fileNib);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const id = buatPengajuan(formData);
     router.push(`/dashboard/pengajuan/${id}`);
   };
+
 
   return (
     <div className="mx-auto max-w-2xl py-8">
@@ -38,6 +43,20 @@ export default function PengajuanBaruPage() {
         Kembali ke Beranda
       </Link>
 
+      {!nibOk ? (
+        <Alert tone="warning" judul="NIB Belum Lengkap">
+          <p className="mb-3">
+            Nomor NIB dan dokumen NIB wajib diisi dan diunggah di halaman{" "}
+            <Link href="/dashboard/profil" className="font-semibold underline">
+              Profil
+            </Link>{" "}
+            sebelum bisa membuat pengajuan ekspor.
+          </p>
+          <Link href="/dashboard/profil">
+            <Button size="sm" variant="outline">Lengkapi Profil</Button>
+          </Link>
+        </Alert>
+      ) : (
       <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">
           Buat Pengajuan Ekspor Baru
@@ -135,6 +154,7 @@ export default function PengajuanBaruPage() {
           </div>
         </form>
       </div>
+      )}
     </div>
   );
 }

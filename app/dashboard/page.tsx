@@ -34,22 +34,38 @@ export default function DashboardBeranda() {
             Kelola pengajuan dokumen ekspor {profile?.namaUsaha}.
           </p>
         </div>
-        <Link href="/dashboard/pengajuan/baru">
-          <Button size="lg">
-            <Plus className="mr-2 h-5 w-5" aria-hidden />
-            Buat Pengajuan Baru
-          </Button>
-        </Link>
+        {(() => {
+          const nibOk = !!(profile?.nomorNib?.trim()) && !!(profile?.fileNib);
+          if (nibOk) {
+            return (
+              <Link href="/dashboard/pengajuan/baru">
+                <Button size="lg">
+                  <Plus className="mr-2 h-5 w-5" aria-hidden />
+                  Buat Pengajuan Baru
+                </Button>
+              </Link>
+            );
+          }
+          return (
+            <div className="flex flex-col items-end gap-1">
+              <Button size="lg" disabled>
+                <Plus className="mr-2 h-5 w-5" aria-hidden />
+                Buat Pengajuan Baru
+              </Button>
+              <p className="text-xs text-amber-600 font-medium">Lengkapi NIB di Profil terlebih dahulu</p>
+            </div>
+          );
+        })()}
       </div>
 
-      {!profile?.nomorNib || !profile?.nomorNpwp ? (
+      {(!profile?.nomorNib?.trim() || !profile?.fileNib) ? (
         <Alert
           tone="warning"
-          judul="Profil Belum Lengkap"
+          judul="NIB Belum Lengkap"
           icon={<FileText className="h-5 w-5 text-amber-600" aria-hidden />}
         >
           <p className="mb-3">
-            NIB atau NPWP perusahaan Anda belum dilengkapi. Mohon lengkapi terlebih dahulu di halaman Profil sebelum mengajukan ekspor.
+            Nomor NIB dan dokumen NIB wajib diisi dan diunggah di halaman Profil sebelum bisa membuat pengajuan ekspor.
           </p>
           <Link href="/dashboard/profil">
             <Button size="sm" variant="outline">

@@ -9,6 +9,7 @@ import type {
   BusinessProfile,
   ConsultationTicket,
   DocumentItem,
+  DocumentOcrResult,
   PengajuanEkspor,
   TimelineEvent,
   User,
@@ -65,7 +66,7 @@ interface AppState {
 
   // Pengajuan actions
   buatPengajuan: (data: Omit<PengajuanEkspor, "id" | "status" | "dokumen" | "tanggal">) => string;
-  unggahDokumenPengajuan: (pengajuanId: string, docId: string, namaFile: string, fileUrl?: string) => void;
+  unggahDokumenPengajuan: (pengajuanId: string, docId: string, namaFile: string, fileUrl?: string, ocr?: DocumentOcrResult) => void;
   kirimPengajuan: (pengajuanId: string) => void;
   tarikPengajuan: (pengajuanId: string) => void;
 
@@ -183,7 +184,7 @@ export const useAppStore = create<AppState>()(
         return id;
       },
 
-      unggahDokumenPengajuan: (pengajuanId, docId, namaFile, fileUrl) =>
+      unggahDokumenPengajuan: (pengajuanId, docId, namaFile, fileUrl, ocr) =>
         set((s) => {
           const pengajuanList = s.pengajuan.map((p) => {
             if (p.id !== pengajuanId) return p;
@@ -198,18 +199,27 @@ export const useAppStore = create<AppState>()(
                       fileUrl: fileUrl ?? d.fileUrl,
                       tanggal: new Date().toISOString(),
                       catatanPetugas: undefined,
+                      ocr,
                     }
                   : d
               ),
             };
           });
 
+          const ocrNote = ocr
+            ? ocr.status === "cocok"
+              ? " — OCR: dokumen sesuai template."
+              : ocr.status === "perlu_perbaikan"
+              ? ` — OCR: ${ocr.temuan.filter((t) => !t.sesuai).length} field perlu diperiksa.`
+              : " — OCR: gagal membaca dokumen."
+            : "";
+
           return {
             pengajuan: pengajuanList,
             timeline: catat(s.timeline, {
               kind: "dokumen",
               judul: `Dokumen diunggah (${pengajuanId})`,
-              detail: `Satu dokumen baru telah diunggah untuk pengajuan ${pengajuanId}.`,
+              detail: `Satu dokumen baru telah diunggah untuk pengajuan ${pengajuanId}.${ocrNote}`,
               aktor: "Anda",
             }),
           };

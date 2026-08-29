@@ -2,12 +2,14 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink, FileText } from "lucide-react";
 import { notFound } from "next/navigation";
 
+import { FlowChart, type FlowStep } from "@/components/shared/FlowChart";
+
 // Definisi panduan statis per dokumen
 const PANDUAN_DOKUMEN: Record<string, {
   judul: string;
   deskripsi: string;
   sumberLuar?: { teks: string; url: string }[];
-  flowchart: string;
+  flowSteps: FlowStep[];
   langkah: { judul: string; detail: string }[];
 }> = {
   "doc-invoice": {
@@ -17,14 +19,14 @@ const PANDUAN_DOKUMEN: Record<string, {
       { teks: "Template Invoice Standar (Kemendag)", url: "https://djpen.kemendag.go.id/app_frontend/links/57-template-dokumen-ekspor" },
       { teks: "Penjelasan Lengkap Invoice Ekspor (UKM Indonesia)", url: "https://www.ukmindonesia.id/baca-deskripsi-program/dokumen-ekspor" }
     ],
-    flowchart: `
-graph TD
-    A[Terima Purchase Order dari Buyer] --> B(Siapkan Kop Surat Perusahaan)
-    B --> C(Isi Data Penjual & Pembeli)
-    C --> D(Rincikan Barang, Jumlah & Harga)
-    D --> E(Cantumkan Incoterms & Term of Payment)
-    E --> F[Tandatangani & Cap Perusahaan]
-    `,
+    flowSteps: [
+      { id: "s1", label: "Terima Purchase Order dari Buyer" },
+      { id: "s2", label: "Siapkan Kop Surat Perusahaan" },
+      { id: "s3", label: "Isi Data Penjual & Pembeli" },
+      { id: "s4", label: "Rincikan Barang, Jumlah & Harga" },
+      { id: "s5", label: "Cantumkan Incoterms & Term of Payment" },
+      { id: "s6", label: "Tandatangani & Cap Perusahaan" },
+    ],
     langkah: [
       { judul: "Siapkan Template Resmi", detail: "Gunakan kop surat perusahaan yang mencantumkan nama, alamat, nomor telepon, dan email perusahaan secara jelas." },
       { judul: "Isi Data Penjual dan Pembeli", detail: "Cantumkan data Shipper/Exporter (Anda) dan Consignee/Buyer (Pembeli di luar negeri)." },
@@ -39,13 +41,13 @@ graph TD
     sumberLuar: [
       { teks: "Template Packing List", url: "https://djpen.kemendag.go.id/app_frontend/links/57-template-dokumen-ekspor" }
     ],
-    flowchart: `
-graph TD
-    A[Barang Selesai Diproduksi & Dikemas] --> B(Timbang & Ukur Tiap Kemasan)
-    B --> C(Catat Gross Weight & Net Weight)
-    C --> D(Isi Detail Sesuai Invoice)
-    D --> E[Tandatangani & Cap Perusahaan]
-    `,
+    flowSteps: [
+      { id: "s1", label: "Barang Selesai Diproduksi & Dikemas" },
+      { id: "s2", label: "Timbang & Ukur Tiap Kemasan" },
+      { id: "s3", label: "Catat Gross Weight & Net Weight" },
+      { id: "s4", label: "Isi Detail Sesuai Invoice" },
+      { id: "s5", label: "Tandatangani & Cap Perusahaan" },
+    ],
     langkah: [
       { judul: "Sesuaikan dengan Invoice", detail: "Nomor dan tanggal Packing List biasanya sama dengan Commercial Invoice. Data pembeli dan penjual juga harus identik." },
       { judul: "Rincikan Kemasan", detail: "Jelaskan jenis kemasan (carton, pallet, wooden box) dan jumlahnya." },
@@ -60,14 +62,14 @@ graph TD
       { teks: "Portal e-SKA Kemendag", url: "https://eska.kemendag.go.id/" },
       { teks: "Panduan Penggunaan e-SKA", url: "https://eska.kemendag.go.id/home/faq" }
     ],
-    flowchart: `
-graph TD
-    A[Siapkan Invoice, Packing List, PEB] --> B(Login ke Portal e-SKA Kemendag)
-    B --> C(Pilih Jenis Form SKA)
-    C --> D(Isi Data & Upload Dokumen Pendukung)
-    D --> E(Persetujuan Instansi Penerbit)
-    E --> F[Cetak SKA Resmi]
-    `,
+    flowSteps: [
+      { id: "s1", label: "Siapkan Invoice, Packing List, PEB" },
+      { id: "s2", label: "Login ke Portal e-SKA Kemendag" },
+      { id: "s3", label: "Pilih Jenis Form SKA" },
+      { id: "s4", label: "Isi Data & Upload Dokumen Pendukung" },
+      { id: "s5", label: "Persetujuan Instansi Penerbit" },
+      { id: "s6", label: "Cetak SKA Resmi" },
+    ],
     langkah: [
       { judul: "Pendaftaran Hak Akses", detail: "Daftar di portal e-SKA Kementerian Perdagangan menggunakan NIPB (Nomor Induk Kepabeanan) / NIB." },
       { judul: "Siapkan Dokumen Pendukung", detail: "Anda memerlukan Commercial Invoice, Packing List, dan PEB yang sudah mendapat NPE (Nota Pelayanan Ekspor) dari Bea Cukai." },
@@ -83,16 +85,23 @@ graph TD
       { teks: "Portal INSW (Indonesia National Single Window)", url: "https://insw.go.id/" },
       { teks: "CEISA 4.0 Bea Cukai", url: "https://portal.beacukai.go.id/" }
     ],
-    flowchart: `
-graph TD
-    A[Siapkan Invoice, Packing List, NIB] --> B(Akses CEISA 4.0 / Modul PEB)
-    B --> C(Input Data Ekspor & Nilai Barang)
-    C --> D(Submit ke Sistem Bea Cukai)
-    D --> E{Apakah Ada Pemeriksaan Fisik?}
-    E -- Ya --> F(Pemeriksaan Fisik oleh Petugas)
-    F --> G[Terbit NPE (Nota Pelayanan Ekspor)]
-    E -- Tidak --> G
-    `,
+    flowSteps: [
+      { id: "s1", label: "Siapkan Invoice, Packing List, NIB" },
+      { id: "s2", label: "Akses CEISA 4.0 / Modul PEB" },
+      { id: "s3", label: "Input Data Ekspor & Nilai Barang" },
+      { id: "s4", label: "Submit ke Sistem Bea Cukai" },
+      {
+        id: "s5",
+        label: "Ada Pemeriksaan Fisik?",
+        shape: "diamond",
+        branches: [
+          { label: "Tidak", targetId: "s7" },
+          { label: "Ya", targetId: "s6" },
+        ],
+      },
+      { id: "s6", label: "Pemeriksaan Fisik oleh Petugas" },
+      { id: "s7", label: "Terbit NPE (Nota Pelayanan Ekspor)" },
+    ],
     langkah: [
       { judul: "Persiapan Akses", detail: "Pastikan Anda memiliki modul PEB, atau menggunakan layanan portal CEISA 4.0. Anda butuh NIB dan nomor rekening untuk bayar Bea Keluar (jika ada)." },
       { judul: "Input Data", detail: "Masukkan detail pengirim, penerima, rincian barang, HS Code, dan nilai FOB berdasarkan Invoice dan Packing List." },
@@ -111,7 +120,7 @@ export default function PanduanDokumenPage({ params }: { params: { id: string } 
   }
 
   return (
-    <div className="mx-auto max-w-4xl py-8">
+    <div className="mx-auto max-w-5xl py-8">
       <Link
         href="/panduan#dokumen"
         className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
@@ -161,15 +170,10 @@ export default function PanduanDokumenPage({ params }: { params: { id: string } 
           <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-2">
             Gambaran Alur (Flowchart)
           </h2>
-          <div className="mt-6 overflow-x-auto rounded-xl bg-slate-50 p-6 border border-slate-200">
-            {/* Mermaid.js can be rendered on the client if we have a component for it, but for a simple representation, we'll use a styled CSS-based flowchart representation for robustness since we don't have mermaid explicitly installed in nextjs components */}
-            <pre className="text-sm text-gray-700 whitespace-pre font-mono">
-              {panduan.flowchart.trim()}
-            </pre>
-            <p className="mt-4 text-xs text-gray-500 italic">
-              * (Visualisasi alur pembuatan dokumen dari awal hingga akhir)
-            </p>
-          </div>
+          <p className="mt-3 text-sm text-gray-500">
+            Visualisasi alur pembuatan dokumen dari awal hingga akhir — baca dari kiri ke kanan.
+          </p>
+          <FlowChart steps={panduan.flowSteps} className="mt-4" />
         </div>
 
         <div className="mt-12">

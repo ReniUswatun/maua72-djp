@@ -1,30 +1,26 @@
 "use client";
 
-import { useRef } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
-  CheckCircle2,
-  Clock,
-  FileText,
   RotateCcw,
   Send,
-  Upload,
 } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DocumentUploadItem } from "@/components/shared/DocumentUploadItem";
 import { PENGAJUAN_STATUS_LABEL, bisaDiperbaiki, pengajuanStatusClass } from "@/lib/pengajuan-status";
 import { formatTanggalPendek } from "@/lib/utils";
 import { useAppStore } from "@/store/assessment-store";
+import type { DocumentOcrResult } from "@/lib/types";
 
 export default function PengajuanDetailPage({ params }: { params: { id: string } }) {
   const pengajuan = useAppStore((s) => s.pengajuan.find((p) => p.id === params.id));
   const unggah = useAppStore((s) => s.unggahDokumenPengajuan);
   const kirim = useAppStore((s) => s.kirimPengajuan);
   const tarik = useAppStore((s) => s.tarikPengajuan);
-  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   if (!pengajuan) {
     notFound();
@@ -36,18 +32,13 @@ export default function PengajuanDetailPage({ params }: { params: { id: string }
     .filter((d) => d.wajib)
     .every((d) => d.status === "diunggah" || d.status === "diverifikasi");
 
-  const handleFile = (docId: string, file: File | undefined) => {
-    if (!file) return;
-    if (file.size > 3_000_000) {
-      // Berkas besar tidak disimpan sebagai data URI agar tidak melebihi kuota localStorage.
-      unggah(pengajuan.id, docId, file.name);
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () =>
-      unggah(pengajuan.id, docId, file.name, typeof reader.result === "string" ? reader.result : undefined);
-    reader.onerror = () => unggah(pengajuan.id, docId, file.name);
-    reader.readAsDataURL(file);
+  const handleUpload = (
+    docId: string,
+    namaFile: string,
+    fileUrl?: string,
+    ocr?: DocumentOcrResult
+  ) => {
+    unggah(pengajuan.id, docId, namaFile, fileUrl, ocr);
   };
 
   return (
@@ -116,99 +107,27 @@ export default function PengajuanDetailPage({ params }: { params: { id: string }
       </div>
 
       <section className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8">
-        <h2 className="text-xl font-semibold">Checklist Dokumen</h2>
-        <p className="mt-2 text-sm text-gray-600">
-          {bolehEdit
-            ? "Unggah atau perbarui dokumen yang diperlukan untuk pengajuan ini."
-            : "Dokumen terkunci selama pengajuan diproses petugas."}
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Checklist Dokumen</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              {bolehEdit
+                ? "Unggah atau perbarui dokumen. Setiap dokumen akan dibaca otomatis (OCR) untuk memvalidasi kelengkapan field."
+                : "Dokumen terkunci selama pengajuan diproses petugas."}
+            </p>
+          </div>
+        </div>
 
         <ul className="mt-8 space-y-6">
-          {dokumen.map((d) => {
-            const adaBerkas = d.status === "diunggah" || d.status === "diverifikasi";
-            return (
-              <li key={d.id} className="flex flex-col gap-4 border-b border-gray-100 pb-6 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex items-start gap-4">
-                  <span
-                    className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                      d.status === "diverifikasi"
-                        ? "bg-green-100 text-green-700"
-                        : d.status === "revisi"
-                          ? "bg-amber-100 text-amber-700"
-                          : d.status === "diunggah"
-                            ? "bg-sky-100 text-sky-700"
-                            : "bg-gray-100 text-gray-400"
-                    }`}
-                  >
-                    {d.status === "diverifikasi" ? (
-                      <CheckCircle2 className="h-5 w-5" aria-hidden />
-                    ) : d.status === "revisi" ? (
-                      <Clock className="h-5 w-5" aria-hidden />
-                    ) : (
-                      <FileText className="h-5 w-5" aria-hidden />
-                    )}
-                  </span>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      {d.nama}{" "}
-                      <span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-bold ${d.wajib ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-600"}`}>
-                        {d.wajib ? "Wajib" : "Opsional"}
-                      </span>
-                    </h3>
-                    <p className="mt-1 text-sm text-gray-600">{d.keterangan}</p>
-
-                    {d.namaFile ? (
-                      <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-gray-50 p-2 text-sm">
-                        <FileText className="h-4 w-4 text-gray-400" aria-hidden />
-                        <span className="font-medium text-gray-900">{d.namaFile}</span>
-                        {d.fileUrl ? (
-                          <a href={d.fileUrl} target="_blank" rel="noreferrer" className="ml-1 font-semibold text-primary-700 hover:underline">
-                            Lihat PDF
-                          </a>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {d.catatanPetugas ? (
-                      <Alert tone="warning" className="mt-3 py-2">
-                        <p className="text-sm font-medium">Catatan petugas:</p>
-                        <p className="text-sm">{d.catatanPetugas}</p>
-                      </Alert>
-                    ) : null}
-                  </div>
-                </div>
-
-                {bolehEdit ? (
-                  <div className="mt-2 flex flex-col gap-3 sm:mt-0 sm:shrink-0 sm:flex-row sm:items-center">
-                    <input
-                      ref={(el) => {
-                        inputRefs.current[d.id] = el;
-                      }}
-                      type="file"
-                      className="sr-only"
-                      aria-label={`Unggah berkas ${d.nama}`}
-                      onChange={(e) => {
-                        handleFile(d.id, e.target.files?.[0]);
-                        e.target.value = "";
-                      }}
-                    />
-                    {!adaBerkas ? (
-                      <Link
-                        href={`/panduan/dokumen/${d.id}`}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-primary-300 bg-primary-50 px-4 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-100"
-                      >
-                        Cara membuat
-                      </Link>
-                    ) : null}
-                    <Button variant="outline" onClick={() => inputRefs.current[d.id]?.click()}>
-                      <Upload className="mr-2 h-4 w-4" aria-hidden />
-                      {adaBerkas ? "Ganti Berkas" : "Unggah"}
-                    </Button>
-                  </div>
-                ) : null}
-              </li>
-            );
-          })}
+          {dokumen.map((d) => (
+            <DocumentUploadItem
+              key={d.id}
+              doc={d}
+              pengajuanId={pengajuan.id}
+              bolehEdit={bolehEdit}
+              onUpload={handleUpload}
+            />
+          ))}
         </ul>
 
         {bolehEdit ? (
@@ -219,7 +138,7 @@ export default function PengajuanDetailPage({ params }: { params: { id: string }
                   {status === "draft" ? "Siap dikirim ke Bea Cukai?" : "Sudah selesai memperbaiki?"}
                 </h3>
                 <p className="mt-1 text-sm text-gray-600">
-                  Pastikan semua dokumen wajib telah diunggah dengan benar sebelum mengirim.
+                  Pastikan semua dokumen wajib telah diunggah. Hasil OCR hanyalah panduan — keputusan akhir ada di tangan petugas.
                 </p>
               </div>
               <Button size="lg" disabled={!semuaWajibDiupload} onClick={() => kirim(pengajuan.id)}>
