@@ -38,23 +38,8 @@ export interface BusinessProfile {
   kategoriLainnya?: string;
   punyaNib?: "aktif" | "proses" | "belum";
   nomorNib?: string;
-  fileNib?: string | null;
   statusNpwp?: "badan" | "pribadi" | "belum";
   nomorNpwp?: string;
-  fileNpwp?: string | null;
-}
-
-export interface PengajuanEkspor {
-  id: string;
-  tanggal: string;
-  namaProduk: string;
-  hsCode: string;
-  nilaiEkspor: string;
-  pembeli: string;
-  negaraTujuan: string;
-  tanggalKirim: string;
-  status: "draft" | "review" | "revisi" | "selesai";
-  dokumen: DocumentItem[];
 }
 
 export interface User {
@@ -63,7 +48,209 @@ export interface User {
   hp: string;
 }
 
+/* ---------- Admin ---------- */
 
+export type AppRole = "user" | "officer" | "super_admin";
+
+export type ReviewStage =
+  | "baru"
+  | "direview"
+  | "disetujui"
+  | "membutuhkan_info"
+  | "ditolak";
+
+export interface AdminAccount {
+  id: string;
+  nama: string;
+  email: string;
+  role: Exclude<AppRole, "user">;
+  jabatan: string;
+  aktif: boolean;
+  passwordResetAt?: string;
+  lastLoginAt?: string;
+}
+
+/** Tingkat keyakinan AI terhadap satu dimensi (fitur C2). */
+export type AiConfidence = "tinggi" | "sedang" | "rendah";
+
+export interface ReviewDimension {
+  id: string;
+  label: string;
+  pillarId: number;
+  aiScore: number;
+  aiDraft: string;
+  /** Alasan AI menyimpulkan skor/draf ini — fitur C1 Explainability. */
+  aiReason?: string;
+  /** Seberapa yakin AI pada dimensi ini — fitur C2. */
+  aiConfidence?: AiConfidence;
+  /** Kenapa confidence-nya seperti itu (mis. data asesmen kurang). */
+  confidenceReason?: string;
+  officerScore: number;
+  officerDraft: string;
+  status: ReviewStage;
+  officerNote?: string;
+  decisionReason?: string;
+  editedAt?: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  officer: string;
+  action: string;
+  field?: string;
+  before?: string;
+  after?: string;
+  note?: string;
+}
+
+export interface DocumentPrecheckFinding {
+  documentId: string;
+  documentName: string;
+  field: string;
+  issue: string;
+  severity: "info" | "warning" | "critical";
+}
+
+export interface ApplicationCase {
+  id: string;
+  businessName: string;
+  ownerName: string;
+  email: string;
+  phone: string;
+  city: string;
+  province: string;
+  status: ReviewStage;
+  readinessLevel: LevelId;
+  readinessScore: number;
+  submittedAt: string;
+  lastUpdatedAt: string;
+  aiSummary: string;
+  aiDraft: string;
+  rawAnswers: AnswerMap;
+  assessment: AssessmentResult;
+  profile: BusinessProfile;
+  documents: DocumentItem[];
+  dimensions: ReviewDimension[];
+  timeline: TimelineEvent[];
+  auditTrail: AuditLogEntry[];
+  precheckFindings?: DocumentPrecheckFinding[];
+  internalNotes?: string[];
+  /** Draf pesan WhatsApp untuk UMKM (fitur C4). Diisi/disunting officer. */
+  waDraft?: string;
+}
+
+/* ---------- Asesmen ---------- */
+
+export interface Pillar {
+  id: number;
+  slug: string;
+  nama: string;
+  ringkas: string;
+  /** Bobot terhadap skor akhir, total = 1. */
+  bobot: number;
+  icon: string;
+}
+
+export type QuestionType = "single" | "multi";
+
+export interface QuestionOption {
+  id: string;
+  label: string;
+  /** Poin mentah untuk opsi ini. */
+  poin: number;
+}
+
+export interface Question {
+  id: string;
+  pillarId: number;
+  teks: string;
+  type: QuestionType;
+  /** Pengali bobot pertanyaan di dalam pilarnya (default 1). */
+  bobot?: number;
+  options: QuestionOption[];
+  /** Teks bantuan bahasa awam, tampil sebagai callout di bawah opsi. */
+  bantuan?: string;
+  /** Istilah glosarium yang di-highlight + tooltip pada teks pertanyaan. */
+  istilah?: string[];
+  /** Kalau diisi, pertanyaan hanya muncul untuk kategori dengan trait ini. */
+  hanyaUntukTrait?: CategoryTrait[];
+  /** Opsi "tidak ada / belum" pada multi-select — mematikan pilihan lain. */
+  opsiNolId?: string;
+}
+
+/** Jawaban: single = 1 id opsi, multi = array id opsi. */
+export type Answer = string | string[];
+export type AnswerMap = Record<string, Answer>;
+
+/* ---------- Hasil ---------- */
+
+export interface PillarScore {
+  pillarId: number;
+  skor: number; // 0-100
+  terjawab: number;
+  total: number;
+}
+
+export type LevelId = 1 | 2 | 3 | 4 | 5;
+
+export interface ReadinessLevel {
+  id: LevelId;
+  nama: string;
+  rentang: string;
+  deskripsi: string;
+  warna: string; // class tailwind teks
+  bg: string; // class tailwind background
+  border: string;
+  ring: string; // warna stroke untuk gauge
+}
+
+export interface AssessmentResult {
+  id: string;
+  tanggal: string; // ISO
+  skorTotal: number;
+  level: LevelId;
+  /** Level sebelum aturan override diterapkan (untuk transparansi). */
+  levelSebelumOverride: LevelId;
+  overrides: string[];
+  pilar: PillarScore[];
+  flagPetugas: string[];
+}
+
+/* ---------- Rekomendasi ---------- */
+
+export type OfficerStatus =
+  | "pending_review"
+  | "approved"
+  | "edited"
+  | "needs_more_info";
+
+export interface OfficerReview {
+  status: OfficerStatus;
+  namaPetugas?: string;
+  tanggal?: string;
+  catatan?: string;
+  /** Versi asli AI, diisi hanya bila status = "edited". */
+  versiAsliAI?: string;
+  versiPetugas?: string;
+}
+
+export interface Recommendation {
+  id: string;
+  judul: string;
+  pillarId: number;
+  ringkas: string;
+  mengapa: string;
+  langkah: string[];
+  effort: 1 | 2 | 3;
+  estimasi: string;
+  prioritas: number;
+  referensi: { label: string; url: string }[];
+  review: OfficerReview;
+  selesai?: boolean;
+  /** Muncul sebagai rekomendasi bila jawaban pertanyaan ini bernilai rendah. */
+  pemicu?: { questionId: string; opsiId: string[] };
+}
 
 /* ---------- Dokumen ---------- */
 

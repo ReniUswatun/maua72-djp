@@ -1,6 +1,9 @@
 import type {
+  AnswerMap,
+  AssessmentResult,
   BusinessProfile,
   DocumentItem,
+  OfficerReview,
   TimelineEvent,
   User,
 } from "./types";
@@ -23,7 +26,52 @@ export const PETUGAS = [
   { id: "ptg-2", nama: "Retno Wulandari", jabatan: "Pemeriksa Dokumen" },
 ];
 
-
+/**
+ * Hasil review petugas yang disimulasikan.
+ * Dipakai oleh aksi "Kirim ke Petugas" di store untuk menunjukkan
+ * officer-in-the-loop tanpa backend.
+ */
+export const MOCK_OFFICER_REVIEWS: Record<string, OfficerReview> = {
+  "urus-nib": {
+    status: "approved",
+    namaPetugas: "Ahmad Fauzi",
+    tanggal: "2026-08-27",
+    catatan:
+      "Rekomendasi sudah tepat. Silakan datang ke Klinik Ekspor bila menemui kendala saat pemilihan KBLI — kami bantu dampingi langsung.",
+  },
+  "tentukan-hs-code": {
+    status: "edited",
+    namaPetugas: "Ahmad Fauzi",
+    tanggal: "2026-08-27",
+    catatan:
+      "Saya tambahkan catatan soal dokumen pendukung yang perlu dibawa, karena untuk produk kopi olahan penentuan kodenya bergantung pada tingkat prosesnya.",
+    versiAsliAI:
+      "Konsultasikan HS Code produk Anda ke Klinik Ekspor Bea Cukai dengan membawa deskripsi produk.",
+    versiPetugas:
+      "Konsultasikan HS Code produk Anda ke Klinik Ekspor Bea Cukai Surakarta. Untuk produk kopi, bawa juga informasi apakah biji sudah disangrai atau masih hijau, serta apakah sudah dihaluskan atau dikemas dalam bentuk sachet — perbedaan ini mengubah pos tarifnya, dan berdampak pada tarif bea masuk di negara tujuan.",
+  },
+  "cek-lartas": {
+    status: "needs_more_info",
+    namaPetugas: "Retno Wulandari",
+    tanggal: "2026-08-28",
+    catatan:
+      "Mohon lampirkan foto produk dan komposisi lengkap agar kami bisa memastikan status Lartas-nya. Beberapa produk turunan kopi dengan campuran bahan tertentu memiliki persyaratan tambahan.",
+  },
+  "pelajari-peb": {
+    status: "approved",
+    namaPetugas: "Retno Wulandari",
+    tanggal: "2026-08-28",
+    catatan:
+      "Setuju. Kami menyelenggarakan kelas PEB untuk UMKM setiap bulan — silakan bergabung sebelum pengiriman pertama Anda.",
+  },
+  "sertifikasi-produk": {
+    status: "approved",
+    namaPetugas: "Ahmad Fauzi",
+    tanggal: "2026-08-27",
+    catatan:
+      "Prioritaskan izin edar lebih dulu, baru sertifikat halal, karena banyak lembaga meminta izin edar sebagai prasyarat.",
+  },
+};
 
 /* ---------- Dokumen ekspor ---------- */
 
@@ -162,7 +210,67 @@ export const DEMO_PROFILE: BusinessProfile = {
   nomorNpwp: "987654321098765",
 };
 
+/** Jawaban demo — dirancang menghasilkan Level 3 (Sedang Berkembang). */
+export const DEMO_ANSWERS: AnswerMap = {
+  p1_1: "a",
+  p1_2: "b",
+  p1_3: "a",
+  p1_4: "b",
+  p1_5: "b",
+  p2_1: "b",
+  p2_2: "b",
+  p2_3: "b",
+  p2_4: ["a", "b"],
+  p2_5: "b",
+  p3_1: "b",
+  p3_2: "d",
+  p3_3: "b",
+  p3_4: "b",
+  p4_1: "b",
+  p4_2: "b",
+  p4_3: ["a", "b"],
+  p4_4: "c",
+  p4_5: "b",
+  p5_1: "b",
+  p5_2: "b",
+  p5_3: ["a", "d"],
+  p5_4: "b",
+  p6_1: "b",
+  p6_2: "a",
+  p6_3: "b",
+  p6_4: "b",
+  p7_1: "b",
+  p7_2: "b",
+  p7_3: "b",
+  p7_4: "b",
+  p8_1: "b",
+  p8_2: "b",
+  p8_3: "b",
+  p8_4: "c",
+};
 
+/** Pengajuan lama — dipakai untuk grafik perkembangan di dashboard. */
+export const DEMO_RIWAYAT_ASESMEN: AssessmentResult[] = [
+  {
+    id: "asesmen-2026-07-14-demo1",
+    tanggal: "2026-07-14T09:00:00.000Z",
+    skorTotal: 41,
+    level: 2,
+    levelSebelumOverride: 2,
+    overrides: [],
+    pilar: [
+      { pillarId: 1, skor: 42, terjawab: 5, total: 5 },
+      { pillarId: 2, skor: 45, terjawab: 5, total: 5 },
+      { pillarId: 3, skor: 25, terjawab: 4, total: 4 },
+      { pillarId: 4, skor: 20, terjawab: 5, total: 5 },
+      { pillarId: 5, skor: 50, terjawab: 4, total: 4 },
+      { pillarId: 6, skor: 48, terjawab: 4, total: 4 },
+      { pillarId: 7, skor: 58, terjawab: 4, total: 4 },
+      { pillarId: 8, skor: 50, terjawab: 4, total: 4 },
+    ],
+    flagPetugas: [],
+  },
+];
 
 export const STATISTIK_LANDING = [
   {
