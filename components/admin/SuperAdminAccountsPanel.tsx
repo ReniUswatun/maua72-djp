@@ -4,15 +4,17 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Ban, KeyRound, PlusCircle, UserRoundCog } from "lucide-react";
+import { Ban, Download, KeyRound, PlusCircle } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { FieldError, Input, Label, Select } from "@/components/ui/input";
+import { downloadCsv, stamp, toCsv } from "@/lib/csv";
 import { formatTanggalPendek } from "@/lib/utils";
-import { useAdminStore } from "@/store/admin-store";
+import { useAdminStore, useCan } from "@/store/admin-store";
 
 const schema = z.object({
   nama: z.string().min(2, "Nama wajib diisi"),
@@ -28,6 +30,21 @@ export function SuperAdminAccountsPanel() {
   const createAccount = useAdminStore((s) => s.createAccount);
   const toggleAccount = useAdminStore((s) => s.toggleAccount);
   const resetAccess = useAdminStore((s) => s.resetAccess);
+  const canExport = useCan("report.export");
+
+  const exportCsv = () => {
+    const rows = accounts.map((account) => ({
+      id: account.id,
+      nama: account.nama,
+      email: account.email,
+      role: account.role,
+      jabatan: account.jabatan,
+      status: account.aktif ? "aktif" : "nonaktif",
+      login_terakhir: account.lastLoginAt ? account.lastLoginAt.slice(0, 10) : "-",
+      reset_terakhir: account.passwordResetAt ? account.passwordResetAt.slice(0, 10) : "-",
+    }));
+    downloadCsv(`akun-admin-${stamp()}`, toCsv(rows));
+  };
 
   const [feedback, setFeedback] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -118,14 +135,25 @@ export function SuperAdminAccountsPanel() {
 
         <Card className="border-slate-200">
           <CardHeader>
-            <CardTitle className="text-lg">Daftar Akun</CardTitle>
-            <CardDescription>Nonaktifkan, reset akses, dan audit perubahan akun.</CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1.5">
+                <CardTitle className="text-lg">Daftar Akun</CardTitle>
+                <CardDescription>Nonaktifkan, reset akses, dan audit perubahan akun.</CardDescription>
+              </div>
+              {canExport ? (
+                <Button size="sm" variant="outline" onClick={exportCsv} disabled={accounts.length === 0}>
+                  <Download className="h-4 w-4" aria-hidden />
+                  Export CSV
+                </Button>
+              ) : null}
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {accounts.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-600">
-                Belum ada akun admin.
-              </div>
+              <EmptyState
+                title="Belum ada akun admin"
+                description="Tambahkan akun officer atau super admin lewat formulir di samping."
+              />
             ) : null}
 
             {accounts.map((account) => (

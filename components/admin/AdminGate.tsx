@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { PERMISSION_LABELS, roleCan, type Permission } from "@/lib/rbac";
 import { useAdminStore } from "@/store/admin-store";
 
 export function AdminGate({
@@ -13,17 +14,20 @@ export function AdminGate({
   loginHref,
   title,
   description,
+  requiredPermission,
 }: {
   children: React.ReactNode;
   allowedRoles: Array<"officer" | "super_admin">;
   loginHref: string;
   title: string;
   description: string;
+  requiredPermission?: Permission;
 }) {
   const pathname = usePathname();
   const hydrated = useAdminStore((s) => s.hydrated);
   const session = useAdminStore((s) => s.session);
   const logout = useAdminStore((s) => s.logout);
+  const rolePermissions = useAdminStore((s) => s.rolePermissions);
 
   if (!hydrated) {
     return (
@@ -60,6 +64,33 @@ export function AdminGate({
             <Link href="/">
               <Button size="lg" variant="outline">
                 Kembali ke Beranda
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    requiredPermission &&
+    !roleCan(rolePermissions, session.role, requiredPermission)
+  ) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center px-6">
+        <div className="w-full max-w-lg rounded-2xl border border-amber-200 bg-amber-50 p-8">
+          <h1 className="text-xl font-bold tracking-tight text-amber-950">
+            Hak akses tidak mencukupi
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-amber-900/80">
+            Peran Anda ({session.role === "super_admin" ? "Super Admin" : "Officer"}) belum
+            memiliki izin <span className="font-semibold">{PERMISSION_LABELS[requiredPermission]}</span>.
+            Hubungi super admin untuk penyesuaian hak akses peran.
+          </p>
+          <div className="mt-7">
+            <Link href="/admin">
+              <Button size="lg" variant="outline">
+                Kembali ke Dashboard
               </Button>
             </Link>
           </div>

@@ -70,12 +70,21 @@ export interface AdminAccount {
   lastLoginAt?: string;
 }
 
+/** Tingkat keyakinan AI terhadap satu dimensi (fitur C2). */
+export type AiConfidence = "tinggi" | "sedang" | "rendah";
+
 export interface ReviewDimension {
   id: string;
   label: string;
   pillarId: number;
   aiScore: number;
   aiDraft: string;
+  /** Alasan AI menyimpulkan skor/draf ini — fitur C1 Explainability. */
+  aiReason?: string;
+  /** Seberapa yakin AI pada dimensi ini — fitur C2. */
+  aiConfidence?: AiConfidence;
+  /** Kenapa confidence-nya seperti itu (mis. data asesmen kurang). */
+  confidenceReason?: string;
   officerScore: number;
   officerDraft: string;
   status: ReviewStage;
@@ -127,6 +136,8 @@ export interface ApplicationCase {
   auditTrail: AuditLogEntry[];
   precheckFindings?: DocumentPrecheckFinding[];
   internalNotes?: string[];
+  /** Draf pesan WhatsApp untuk UMKM (fitur C4). Diisi/disunting officer. */
+  waDraft?: string;
 }
 
 /* ---------- Asesmen ---------- */

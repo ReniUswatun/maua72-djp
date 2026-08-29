@@ -5,15 +5,16 @@ export default function AdminProtectedLayout({ children }: { children: React.Rea
   return (
     <AdminGate
       allowedRoles={["officer", "super_admin"]}
-      loginHref="/admin/masuk"
+      loginHref="/masuk?peran=officer"
       title="Dashboard Officer"
       description="Akses terproteksi untuk monitoring pengajuan, review AI Draft, dan histori keputusan."
+      requiredPermission="dashboard.view"
     >
       <AdminShell
         brand="Officer Workspace"
         navItems={ADMIN_NAV}
         accent="bg-gradient-to-br from-slate-700 to-slate-950"
-        loginHref="/admin/masuk"
+        loginHref="/masuk?peran=officer"
       >
         {children}
       </AdminShell>

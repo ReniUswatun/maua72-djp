@@ -188,6 +188,66 @@ mengubah komponen.
 
 ---
 
+## Peran & akses
+
+Tiga peran, satu halaman masuk (`/masuk`) dengan pemilih peran:
+
+| Peran | Login | Area | Akun demo |
+|---|---|---|---|
+| UMKM | `/masuk` → UMKM | `/dashboard` | tombol "akun demo" |
+| Officer | `/masuk` → Officer | `/admin` | `ahmad.fauzi@beacukai.go.id` / `admin123` |
+| Super Admin | `/masuk` → Super Admin | `/super-admin` | `dewi.lestari@beacukai.go.id` / `super123` |
+
+`/admin/masuk` dan `/super-admin/masuk` di-redirect ke `/masuk`. RBAC diatur di
+`lib/rbac.ts`; super admin mengubah izin per peran di `/super-admin/akses`, dan
+`AdminGate` memblokir halaman sekaligus `AdminShell` menyembunyikan menu.
+
+Halaman `/portal` adalah pengantar publik: penjelasan platform + tiga peran.
+
+## Menjalankan dengan Docker
+
+```bash
+docker build --network=host -t siapekspor:latest .   # --network=host: host ini pakai DNS Tailscale
+docker run -d --name siapekspor -p 1555:1555 siapekspor:latest
+# buka http://localhost:1555
+```
+
+Image memakai Next.js standalone output; container listen di port **1555**
+(`ENV PORT=1555`).
+
+## Tunnel Cloudflare (reniuswatun.my.id)
+
+Named tunnel supaya domain sendiri yang dipakai:
+
+```bash
+cloudflared tunnel login                               # pilih zona reniuswatun.my.id
+cloudflared tunnel create siapekspor                   # simpan <TUNNEL_ID>.json
+cloudflared tunnel route dns siapekspor reniuswatun.my.id
+```
+
+`~/.cloudflared/config.yml`:
+
+```yaml
+tunnel: siapekspor
+credentials-file: /home/reni/.cloudflared/<TUNNEL_ID>.json
+ingress:
+  - hostname: reniuswatun.my.id
+    service: http://localhost:1555
+  - service: http_status:404
+```
+
+```bash
+cloudflared tunnel run siapekspor        # atau: cloudflared service install
+```
+
+Cara cepat tanpa DNS setup (URL acak `*.trycloudflare.com`):
+
+```bash
+cloudflared tunnel --url http://localhost:1555
+```
+
+---
+
 ## Catatan
 
 Angka statistik di landing page dilabeli sebagai ilustrasi, dan testimoni

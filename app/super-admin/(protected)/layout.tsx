@@ -5,7 +5,7 @@ export default function SuperAdminProtectedLayout({ children }: { children: Reac
   return (
     <AdminGate
       allowedRoles={["super_admin"]}
-      loginHref="/super-admin/masuk"
+      loginHref="/masuk?peran=super_admin"
       title="Super Admin Center"
       description="Area khusus untuk CRUD akun admin dan pengelolaan akses."
     >
@@ -13,7 +13,7 @@ export default function SuperAdminProtectedLayout({ children }: { children: Reac
         brand="Super Admin"
         navItems={SUPER_ADMIN_NAV}
         accent="bg-gradient-to-br from-amber-500 to-orange-600"
-        loginHref="/super-admin/masuk"
+        loginHref="/masuk?peran=super_admin"
       >
         {children}
       </AdminShell>

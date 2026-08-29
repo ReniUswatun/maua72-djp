@@ -1,17 +1,41 @@
 "use client";
 
-import { Activity, ShieldCheck, Users } from "lucide-react";
+import Link from "next/link";
+import { Activity, ArrowRight, Gauge, ShieldCheck, ShieldHalf, Users } from "lucide-react";
 
 import { SuperAdminAccountsPanel } from "@/components/admin/SuperAdminAccountsPanel";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { computeAccuracy } from "@/lib/ai-accuracy";
 import { useAdminStore, useAdminSummary } from "@/store/admin-store";
+
+const SHORTCUTS = [
+  {
+    href: "/super-admin/akses",
+    icon: ShieldHalf,
+    title: "Hak Akses Peran",
+    desc: "Atur izin RBAC untuk officer & super admin.",
+  },
+  {
+    href: "/super-admin/akurasi-ai",
+    icon: Gauge,
+    title: "Akurasi AI",
+    desc: "Pantau seberapa sering draf AI dipakai apa adanya.",
+  },
+  {
+    href: "/super-admin/aktivitas",
+    icon: Activity,
+    title: "Activity Log",
+    desc: "Rekap aktivitas akun dan audit trail case.",
+  },
+];
 
 export default function SuperAdminDashboardPage() {
   const accounts = useAdminStore((s) => s.accounts);
+  const cases = useAdminStore((s) => s.cases);
   const summary = useAdminSummary();
   const officerCount = accounts.filter((account) => account.role === "officer").length;
-  const superAdminCount = accounts.filter((account) => account.role === "super_admin").length;
+  const accuracy = computeAccuracy(cases).overall;
 
   return (
     <div className="space-y-6">
@@ -42,14 +66,35 @@ export default function SuperAdminDashboardPage() {
           </div>
           <div className="rounded-2xl bg-white/5 p-4">
             <div className="flex items-center gap-3">
-              <Activity className="h-5 w-5 text-sky-300" aria-hidden />
-              <p className="text-sm text-white/70">Case aktif</p>
+              <Gauge className="h-5 w-5 text-sky-300" aria-hidden />
+              <p className="text-sm text-white/70">Akurasi draf AI</p>
             </div>
-            <p className="mt-3 text-3xl font-bold">{summary.total}</p>
-            <p className="mt-2 text-sm text-white/60">Pengajuan UMKM yang dipantau</p>
+            <p className="mt-3 text-3xl font-bold">{accuracy.akurasi}%</p>
+            <p className="mt-2 text-sm text-white/60">
+              {accuracy.total - accuracy.belumDireview} dari {accuracy.total} dimensi direview · {summary.total} case
+            </p>
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        {SHORTCUTS.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-card transition-colors hover:border-slate-300"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+              <item.icon className="h-5 w-5" aria-hidden />
+            </div>
+            <p className="mt-4 flex items-center gap-1 font-semibold text-slate-900">
+              {item.title}
+              <ArrowRight className="h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
+            </p>
+            <p className="mt-1 text-sm text-slate-600">{item.desc}</p>
+          </Link>
+        ))}
+      </div>
 
       <SuperAdminAccountsPanel />
     </div>

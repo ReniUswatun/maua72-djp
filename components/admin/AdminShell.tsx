@@ -7,6 +7,8 @@ import {
   ListChecks,
   LogOut,
   Shield,
+  ShieldHalf,
+  Gauge,
   Users,
   History,
   FileText,
@@ -17,13 +19,15 @@ import {
 import { Logo } from "@/components/shared/Logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn, initials } from "@/lib/utils";
+import { roleCan, type Permission } from "@/lib/rbac";
+import { cn } from "@/lib/utils";
 import { useAdminStore } from "@/store/admin-store";
 
 export interface AdminNavItem {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
+  permission?: Permission;
 }
 
 function isActive(pathname: string, href: string) {
@@ -49,6 +53,11 @@ export function AdminShell({
   const router = useRouter();
   const session = useAdminStore((s) => s.session);
   const logout = useAdminStore((s) => s.logout);
+  const rolePermissions = useAdminStore((s) => s.rolePermissions);
+
+  const visibleNav = navItems.filter(
+    (item) => !item.permission || roleCan(rolePermissions, session?.role, item.permission),
+  );
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-800">
@@ -74,7 +83,7 @@ export function AdminShell({
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-4" aria-label={`${brand} navigation`}>
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {visibleNav.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             return (
               <Link
@@ -139,7 +148,7 @@ export function AdminShell({
 
         <div id="mobile-admin-nav" className="hidden border-b border-slate-200 bg-white px-5 py-4 lg:hidden">
           <div className="grid gap-2 sm:grid-cols-2">
-            {navItems.map(({ href, label }) => (
+            {visibleNav.map(({ href, label }) => (
               <Link key={href} href={href} className="rounded-xl border border-slate-200 px-3 py-3 text-sm font-medium text-slate-700">
                 {label}
               </Link>
@@ -156,14 +165,16 @@ export function AdminShell({
 }
 
 export const ADMIN_NAV: AdminNavItem[] = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/pengajuan", label: "Pengajuan", icon: ListChecks },
-  { href: "/admin/riwayat", label: "Riwayat", icon: History },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.view" },
+  { href: "/admin/pengajuan", label: "Pengajuan", icon: ListChecks, permission: "case.view" },
+  { href: "/admin/riwayat", label: "Riwayat", icon: History, permission: "history.view" },
 ];
 
 export const SUPER_ADMIN_NAV: AdminNavItem[] = [
   { href: "/super-admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/super-admin/akun", label: "Kelola Akun", icon: Users },
-  { href: "/super-admin/aktivitas", label: "Activity Log", icon: Workflow },
-  { href: "/admin/pengajuan", label: "Lihat Pengajuan", icon: FileText },
+  { href: "/super-admin/akun", label: "Kelola Akun", icon: Users, permission: "account.manage" },
+  { href: "/super-admin/akses", label: "Hak Akses Peran", icon: ShieldHalf, permission: "rbac.manage" },
+  { href: "/super-admin/aktivitas", label: "Activity Log", icon: Workflow, permission: "activity.view" },
+  { href: "/super-admin/akurasi-ai", label: "Akurasi AI", icon: Gauge, permission: "ai.metrics.view" },
+  { href: "/admin/pengajuan", label: "Lihat Pengajuan", icon: FileText, permission: "case.view" },
 ];

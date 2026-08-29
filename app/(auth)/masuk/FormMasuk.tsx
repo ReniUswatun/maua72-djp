@@ -2,16 +2,46 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { PlayCircle } from "lucide-react";
+import { ArrowRight, Building2, PlayCircle, ShieldCheck, Users } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { useAdminStore } from "@/store/admin-store";
 import { useAppStore } from "@/store/assessment-store";
+
+type Peran = "umkm" | "officer" | "super_admin";
+
+const PERAN: {
+  id: Peran;
+  label: string;
+  icon: typeof Users;
+  deskripsi: string;
+}[] = [
+  {
+    id: "umkm",
+    label: "UMKM",
+    icon: Building2,
+    deskripsi: "Pemilik usaha yang ingin cek kesiapan ekspor dan menerima rekomendasi tervalidasi.",
+  },
+  {
+    id: "officer",
+    label: "Officer",
+    icon: ShieldCheck,
+    deskripsi: "Petugas Bea Cukai yang meninjau pengajuan, memperbaiki draf AI, dan mengambil keputusan.",
+  },
+  {
+    id: "super_admin",
+    label: "Super Admin",
+    icon: Users,
+    deskripsi: "Pengelola sistem: akun officer, hak akses peran, log aktivitas, dan metrik AI.",
+  },
+];
 
 const skema = z.object({
   email: z.string().email("Format email belum benar"),
@@ -20,32 +50,90 @@ const skema = z.object({
 
 type Nilai = z.infer<typeof skema>;
 
+function parsePeran(value: string | null): Peran {
+  if (value === "officer" || value === "super_admin" || value === "umkm") return value;
+  if (value === "admin") return "officer";
+  return "umkm";
+}
+
 export function FormMasuk() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [peran, setPeran] = React.useState<Peran>(() => parsePeran(searchParams.get("peran")));
+  const [errorPesan, setErrorPesan] = React.useState<string | null>(null);
+
   const masuk = useAppStore((s) => s.masuk);
   const muatDemo = useAppStore((s) => s.muatDemo);
-  const profile = useAppStore((s) => s.profile);
+  const loginAdmin = useAdminStore((s) => s.login);
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    reset,
+    formState: { errors, isSubmitting },
   } = useForm<Nilai>({ resolver: zodResolver(skema) });
 
+  React.useEffect(() => {
+    setErrorPesan(null);
+    reset();
+  }, [peran, reset]);
+
   const onSubmit = (nilai: Nilai) => {
-    masuk(nilai.email);
-    router.push("/dashboard");
+    setErrorPesan(null);
+
+    if (peran === "umkm") {
+      masuk(nilai.email);
+      router.push("/dashboard");
+      return;
+    }
+
+    const hasil = loginAdmin(nilai.email, nilai.password, peran);
+    if (!hasil.ok) {
+      setErrorPesan(hasil.message ?? "Login gagal.");
+      return;
+    }
+    router.push(peran === "super_admin" ? "/super-admin" : "/admin");
   };
+
+  const aktif = PERAN.find((p) => p.id === peran)!;
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-card">
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-card sm:p-8">
         <h1 className="text-2xl font-bold tracking-tight">Masuk</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Lanjutkan asesmen atau lihat perkembangan kesiapan usaha Anda.
-        </p>
+        <p className="mt-2 text-sm text-gray-600">Pilih peran Anda, lalu masuk dengan akun yang sesuai.</p>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-7 space-y-5" noValidate>
+        <div
+          role="tablist"
+          aria-label="Pilih peran"
+          className="mt-6 grid grid-cols-3 gap-1.5 rounded-xl bg-gray-100 p-1.5"
+        >
+          {PERAN.map((p) => {
+            const dipilih = p.id === peran;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                role="tab"
+                aria-selected={dipilih}
+                onClick={() => setPeran(p.id)}
+                className={cn(
+                  "flex flex-col items-center gap-1 rounded-lg px-2 py-2.5 text-xs font-semibold transition-colors",
+                  dipilih
+                    ? "bg-white text-primary-800 shadow-sm"
+                    : "text-gray-500 hover:text-gray-800",
+                )}
+              >
+                <p.icon className="h-4 w-4" aria-hidden />
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="mt-3 text-xs leading-relaxed text-gray-500">{aktif.deskripsi}</p>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-5" noValidate>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -53,7 +141,7 @@ export function FormMasuk() {
               type="email"
               inputMode="email"
               autoComplete="email"
-              placeholder="nama@usaha.id"
+              placeholder={peran === "umkm" ? "nama@usaha.id" : "nama@beacukai.go.id"}
               aria-invalid={!!errors.email}
               {...register("email")}
             />
@@ -72,26 +160,34 @@ export function FormMasuk() {
             <FieldError>{errors.password?.message}</FieldError>
           </div>
 
-          <Button type="submit" full size="lg">
-            Masuk
+          {errorPesan ? (
+            <Alert tone="danger" judul="Login gagal">
+              {errorPesan}
+            </Alert>
+          ) : null}
+
+          <Button type="submit" full size="lg" disabled={isSubmitting}>
+            Masuk sebagai {aktif.label}
+            <ArrowRight className="h-4 w-4" aria-hidden />
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Belum punya akun?{" "}
-          <Link href="/daftar" className="font-semibold text-primary-700 hover:underline">
-            Daftar gratis
-          </Link>
-        </p>
+        {peran === "umkm" ? (
+          <p className="mt-6 text-center text-sm text-gray-600">
+            Belum punya akun?{" "}
+            <Link href="/daftar" className="font-semibold text-primary-700 hover:underline">
+              Daftar gratis
+            </Link>
+          </p>
+        ) : null}
       </div>
 
-      <Alert tone="primary" judul="Sedang menilai prototipe ini?">
-        <p className="mb-3">
-          Masuk dengan data demo untuk langsung melihat dashboard berisi hasil
-          asesmen, rekomendasi yang sudah divalidasi petugas, dan riwayat
-          konsultasi.
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row">
+      {peran === "umkm" ? (
+        <Alert tone="primary" judul="Sedang menilai prototipe ini?">
+          <p className="mb-3">
+            Masuk dengan data demo untuk langsung melihat dashboard berisi hasil asesmen,
+            rekomendasi yang sudah divalidasi petugas, dan riwayat konsultasi.
+          </p>
           <Button
             variant="subtle"
             size="sm"
@@ -103,18 +199,24 @@ export function FormMasuk() {
             <PlayCircle className="h-4 w-4" aria-hidden />
             Masuk sebagai akun demo
           </Button>
-          <Link href="/admin/masuk">
-            <Button variant="outline" size="sm" full>
-              Masuk Officer
-            </Button>
-          </Link>
-          <Link href="/super-admin/masuk">
-            <Button variant="ghost" size="sm" full>
-              Masuk Super Admin
-            </Button>
-          </Link>
-        </div>
-      </Alert>
+        </Alert>
+      ) : (
+        <Alert tone="primary" judul="Akun demo tersedia">
+          <p className="text-sm leading-relaxed">
+            {peran === "officer" ? (
+              <>
+                Officer: <span className="font-semibold">ahmad.fauzi@beacukai.go.id</span> /{" "}
+                <span className="font-semibold">admin123</span>
+              </>
+            ) : (
+              <>
+                Super admin: <span className="font-semibold">dewi.lestari@beacukai.go.id</span> /{" "}
+                <span className="font-semibold">super123</span>
+              </>
+            )}
+          </p>
+        </Alert>
+      )}
     </div>
   );
 }

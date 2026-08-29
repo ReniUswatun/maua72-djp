@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ClipboardCheck, Clock3, Layers3, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { AlarmClock, ArrowRight, ClipboardCheck, Clock3, Search, ShieldCheck, Sparkles } from "lucide-react";
 
 import { AdminCasesTable } from "@/components/admin/AdminCasesTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { levelLabel, readinessBuckets } from "@/lib/admin-data";
+import { countOverdue, SLA_LIMIT_DAYS } from "@/lib/sla";
 import { formatTanggalPendek } from "@/lib/utils";
 import { useAdminStore, useAdminSummary } from "@/store/admin-store";
 
@@ -34,6 +35,7 @@ export default function AdminDashboardPage() {
   const cases = useAdminStore((s) => s.cases);
   const summary = useAdminSummary();
   const buckets = readinessBuckets(cases);
+  const overdue = countOverdue(cases);
   const recent = [...cases].sort((a, b) => +new Date(b.lastUpdatedAt) - +new Date(a.lastUpdatedAt)).slice(0, 4);
 
   return (
@@ -84,11 +86,17 @@ export default function AdminDashboardPage() {
         </Card>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <SummaryCard label="Total Pengajuan" value={summary.total} hint="Seluruh case aktif pada prototipe" icon={ClipboardCheck} />
         <SummaryCard label="Baru" value={summary.baru} hint="Belum dibuka officer" icon={Sparkles} />
         <SummaryCard label="Direview" value={summary.direview} hint="Sedang dalam workspace review" icon={ShieldCheck} />
         <SummaryCard label="Butuh Info" value={summary.membutuhkanInfo} hint="Menunggu pelengkapan UMKM" icon={Clock3} />
+        <SummaryCard
+          label="Terlambat (SLA)"
+          value={overdue}
+          hint={`Menunggu > ${SLA_LIMIT_DAYS} hari tanpa keputusan`}
+          icon={AlarmClock}
+        />
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">

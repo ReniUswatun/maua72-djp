@@ -2,14 +2,17 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Download, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
 import { levelLabel } from "@/lib/admin-data";
+import { downloadCsv, stamp, toCsv } from "@/lib/csv";
+import { slaInfo, slaTone } from "@/lib/sla";
 import { formatTanggalPendek } from "@/lib/utils";
+import { useCan } from "@/store/admin-store";
 import type { ApplicationCase, ReviewStage } from "@/lib/types";
 
 const PAGE_SIZE = 5;
@@ -74,8 +77,28 @@ export function AdminCasesTable({
     return result;
   }, [cases, level, query, sortOrder, status]);
 
+  const canExport = useCan("report.export");
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const exportCsv = () => {
+    const rows = filtered.map((item) => ({
+      id: item.id,
+      nama_umkm: item.businessName,
+      pemilik: item.ownerName,
+      kota: item.city,
+      provinsi: item.province,
+      email: item.email,
+      telepon: item.phone,
+      level: item.readinessLevel,
+      skor: item.readinessScore,
+      status: item.status,
+      sla: slaInfo(item).label,
+      masuk: item.submittedAt.slice(0, 10),
+      update_terakhir: item.lastUpdatedAt.slice(0, 10),
+    }));
+    downloadCsv(`pengajuan-umkm-${stamp()}`, toCsv(rows));
+  };
 
   React.useEffect(() => {
     setPage(1);
@@ -84,8 +107,18 @@ export function AdminCasesTable({
   return (
     <Card className="border-slate-200">
       <CardHeader>
-        <CardTitle className="text-xl">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1.5">
+            <CardTitle className="text-xl">{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </div>
+          {canExport ? (
+            <Button size="sm" variant="outline" onClick={exportCsv} disabled={filtered.length === 0}>
+              <Download className="h-4 w-4" aria-hidden />
+              Export CSV
+            </Button>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 lg:grid-cols-[1.4fr_0.9fr_0.6fr_0.6fr]">
@@ -125,6 +158,7 @@ export function AdminCasesTable({
                 <th className="px-4 py-3 text-left">Owner</th>
                 <th className="px-4 py-3 text-left">Level</th>
                 <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-left">SLA</th>
                 <th className="px-4 py-3 text-left">Score</th>
                 <th className="px-4 py-3 text-left">Update</th>
                 <th className="px-4 py-3 text-left">Aksi</th>
@@ -145,6 +179,16 @@ export function AdminCasesTable({
                     <td className="px-4 py-4">
                       <Badge tone={statusTone(item.status)}>{statusLabel(item.status)}</Badge>
                     </td>
+                    <td className="px-4 py-4">
+                      {(() => {
+                        const sla = slaInfo(item);
+                        return (
+                          <Badge tone={slaTone(sla.level)}>
+                            {sla.level === "selesai" ? "—" : sla.label}
+                          </Badge>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-4 font-semibold text-slate-900">{item.readinessScore}</td>
                     <td className="px-4 py-4 text-slate-600">{formatTanggalPendek(item.lastUpdatedAt)}</td>
                     <td className="px-4 py-4">
@@ -156,8 +200,9 @@ export function AdminCasesTable({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
-                    Tidak ada pengajuan yang cocok.
+                  <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
+                    Tidak ada pengajuan yang cocok dengan pencarian atau filter saat ini.
+                    Coba longgarkan filter status/level.
                   </td>
                 </tr>
               )}

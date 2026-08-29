@@ -1,3 +1,5 @@
+import { deriveDimensionInsight } from "./ai-insights";
+import { getPillar } from "./assessment-config";
 import { buatRekomendasi } from "./recommendations";
 import { hitungHasil, LEVELS } from "./scoring";
 import {
@@ -46,13 +48,18 @@ function buildDimensions(
     const aiRecommendation =
       recommendations.find((item) => item.pillarId === pillar.pillarId)?.ringkas ??
       `Skor pilar ${pillar.pillarId} perlu ditinjau petugas.`;
+    const insight = deriveDimensionInsight(pillar, answers, profile);
+    const pillarName = getPillar(pillar.pillarId)?.nama ?? `Pilar ${pillar.pillarId}`;
 
     return {
       id: `${caseId}-pillar-${pillar.pillarId}`,
-      label: `Dimensi ${pillar.pillarId}`,
+      label: pillarName,
       pillarId: pillar.pillarId,
       aiScore: pillar.skor,
       aiDraft: aiRecommendation,
+      aiReason: insight.reason,
+      aiConfidence: insight.confidence,
+      confidenceReason: insight.confidenceReason,
       officerScore: pillar.skor,
       officerDraft: aiRecommendation,
       status: "baru" as ReviewStage,

@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/store/assessment-store";
 
 const TAUTAN = [
+  { href: "/portal", label: "Tentang Platform" },
   { href: "/#cara-kerja", label: "Cara Kerja" },
   { href: "/#pilar", label: "8 Pilar" },
-  { href: "/#untuk-siapa", label: "Untuk Siapa" },
   { href: "/panduan", label: "Panduan" },
 ];
 
@@ -58,7 +58,7 @@ export function Navbar() {
               <Link href="/daftar">
                 <Button size="sm">Daftar Gratis</Button>
               </Link>
-              <Link href="/admin/masuk">
+              <Link href="/masuk?peran=officer">
                 <Button variant="outline" size="sm">
                   <ShieldCheck className="h-4 w-4" />
                   Officer
@@ -107,7 +107,7 @@ export function Navbar() {
                   <Link href="/daftar" onClick={() => setBuka(false)}>
                     <Button full>Daftar Gratis</Button>
                   </Link>
-                  <Link href="/admin/masuk" onClick={() => setBuka(false)}>
+                  <Link href="/masuk?peran=officer" onClick={() => setBuka(false)}>
                     <Button variant="ghost" full>
                       Officer Login
                     </Button>

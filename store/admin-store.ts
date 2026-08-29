@@ -9,6 +9,13 @@ import {
   loadAdminSnapshot,
   validateAdminCredential,
 } from "@/lib/admin-api";
+import {
+  defaultRolePermissions,
+  normalizeRolePermissions,
+  roleCan,
+  type Permission,
+  type RolePermissionMap,
+} from "@/lib/rbac";
 import { useAppStore } from "@/store/assessment-store";
 import type {
   AdminAccount,
@@ -35,8 +42,16 @@ interface AdminState {
   session: AdminSession | null;
   accounts: AdminAccount[];
   cases: ApplicationCase[];
+  rolePermissions: RolePermissionMap;
 
   setHydrated: () => void;
+  setRolePermission: (
+    role: "officer" | "super_admin",
+    permission: Permission,
+    enabled: boolean,
+  ) => void;
+  resetRolePermissions: () => void;
+  saveWaDraft: (caseId: string, text: string) => void;
   login: (
     email: string,
     password: string,
@@ -196,9 +211,34 @@ export const useAdminStore = create<AdminState>()(
     (set) => ({
       hydrated: false,
       session: null,
+      rolePermissions: defaultRolePermissions(),
       ...loadAdminSnapshot(),
 
       setHydrated: () => set({ hydrated: true }),
+
+      setRolePermission: (role, permission, enabled) =>
+        set((state) => {
+          if (role === "super_admin") return state; // super admin terkunci penuh
+          const current = new Set(state.rolePermissions[role] ?? []);
+          if (enabled) current.add(permission);
+          else current.delete(permission);
+          return {
+            rolePermissions: {
+              ...state.rolePermissions,
+              [role]: [...current],
+            },
+          };
+        }),
+
+      resetRolePermissions: () => set({ rolePermissions: defaultRolePermissions() }),
+
+      saveWaDraft: (caseId, text) =>
+        set((state) => ({
+          cases: applyCaseUpdate(state.cases, caseId, (current) => ({
+            ...current,
+            waDraft: text,
+          })),
+        })),
 
       login: (email, password, role) => {
         const matched = validateAdminCredential({ email, password, role });
@@ -399,10 +439,21 @@ export const useAdminStore = create<AdminState>()(
       name: "siapekspor-admin-state",
       storage: createJSONStorage(() => localStorage),
       partialize: ({ hydrated, ...rest }) => rest,
-      onRehydrateStorage: () => (state) => state?.setHydrated(),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.rolePermissions = normalizeRolePermissions(state.rolePermissions);
+        state.setHydrated();
+      },
     },
   ),
 );
+
+/** Hook: apakah sesi admin aktif punya permission tertentu. */
+export function useCan(permission: Permission): boolean {
+  return useAdminStore((state) =>
+    roleCan(state.rolePermissions, state.session?.role, permission),
+  );
+}
 
 export function useAdminSummary() {
   const cases = useAdminStore((state) => state.cases);

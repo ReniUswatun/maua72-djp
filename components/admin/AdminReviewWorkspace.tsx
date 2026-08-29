@@ -19,8 +19,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea, Input, Label } from "@/components/ui/input";
+import { WhatsAppDraftPanel } from "@/components/admin/WhatsAppDraftPanel";
+import { confidenceLabel, confidenceTone } from "@/lib/ai-insights";
 import { formatTanggal, formatTanggalPendek } from "@/lib/utils";
-import { useAdminStore } from "@/store/admin-store";
+import { useAdminStore, useCan } from "@/store/admin-store";
 import type { ApplicationCase, ReviewDimension } from "@/lib/types";
 
 function statusTone(status: ReviewDimension["status"]) {
@@ -58,6 +60,7 @@ function DimensionEditor({
   dimension: ReviewDimension;
 }) {
   const updateDimension = useAdminStore((s) => s.updateDimension);
+  const canReview = useCan("case.review");
   const [score, setScore] = React.useState(String(dimension.officerScore));
   const [draft, setDraft] = React.useState(dimension.officerDraft);
   const [note, setNote] = React.useState(dimension.officerNote ?? "");
@@ -90,6 +93,33 @@ function DimensionEditor({
             <p className="mt-4 text-sm font-semibold text-sky-900">Skor officer: {Number(score) || 0}</p>
           </div>
         </div>
+
+        {dimension.aiReason ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                Alasan AI (Explainability)
+              </p>
+              {dimension.aiConfidence ? (
+                <Badge tone={confidenceTone(dimension.aiConfidence)}>
+                  {confidenceLabel(dimension.aiConfidence)}
+                </Badge>
+              ) : null}
+            </div>
+            <p className="mt-2 text-sm leading-relaxed text-slate-700">{dimension.aiReason}</p>
+            {dimension.confidenceReason ? (
+              <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                Catatan keyakinan: {dimension.confidenceReason}
+              </p>
+            ) : null}
+            {dimension.aiConfidence === "rendah" ? (
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                AI menandai dimensi ini <strong>perlu dicek manual</strong> sebelum keputusan diambil.
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
@@ -141,8 +171,15 @@ function DimensionEditor({
           </div>
         ) : null}
 
+        {!canReview ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            Peran Anda tidak memiliki izin menyunting review dimensi.
+          </p>
+        ) : null}
+
         <div className="flex flex-wrap gap-3">
           <Button
+            disabled={!canReview}
             onClick={() =>
               updateDimension(caseItem.id, dimension.id, {
                 officerScore: Math.max(0, Math.min(100, Number(score) || 0)),
@@ -176,6 +213,7 @@ export function AdminReviewWorkspace({ caseItem }: { caseItem: ApplicationCase }
   const addCaseNote = useAdminStore((s) => s.addCaseNote);
   const setCaseDecision = useAdminStore((s) => s.setCaseDecision);
   const submitReview = useAdminStore((s) => s.submitReview);
+  const canDecide = useCan("case.decide");
   const [noteDraft, setNoteDraft] = React.useState("");
   const [finalReason, setFinalReason] = React.useState("");
   const [busyAction, setBusyAction] = React.useState<
@@ -264,6 +302,13 @@ export function AdminReviewWorkspace({ caseItem }: { caseItem: ApplicationCase }
             <CardDescription>Approval final, reject, atau minta info tambahan.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {!canDecide ? (
+              <Alert tone="warning" judul="Tidak bisa mengambil keputusan">
+                Peran Anda tidak memiliki izin <span className="font-semibold">case.decide</span>.
+                Anda masih dapat meninjau, tetapi keputusan akhir harus diambil peran lain.
+              </Alert>
+            ) : null}
+
             <div className="space-y-2">
               <Label htmlFor="final-reason">Alasan keputusan akhir</Label>
               <Textarea id="final-reason" value={finalReason} onChange={(event) => setFinalReason(event.target.value)} placeholder="Tulis alasan singkat dan dapat diaudit." />
@@ -272,7 +317,7 @@ export function AdminReviewWorkspace({ caseItem }: { caseItem: ApplicationCase }
             <div className="flex flex-col gap-3">
               {caseItem.status === "baru" ? (
                 <Button
-                  disabled={busyAction !== null}
+                  disabled={busyAction !== null || !canDecide}
                   onClick={async () => {
                     setStatusMessage(null);
                     setBusyAction("submit");
@@ -288,7 +333,7 @@ export function AdminReviewWorkspace({ caseItem }: { caseItem: ApplicationCase }
                 </Button>
               ) : null}
               <Button
-                disabled={busyAction !== null}
+                disabled={busyAction !== null || !canDecide}
                 onClick={async () => {
                   setStatusMessage(null);
                   setBusyAction("approve");
@@ -304,7 +349,7 @@ export function AdminReviewWorkspace({ caseItem }: { caseItem: ApplicationCase }
               </Button>
               <Button
                 variant="outline"
-                disabled={busyAction !== null}
+                disabled={busyAction !== null || !canDecide}
                 onClick={async () => {
                   if (!finalReason.trim()) {
                     setFeedbackTone("danger");
@@ -325,7 +370,7 @@ export function AdminReviewWorkspace({ caseItem }: { caseItem: ApplicationCase }
               </Button>
               <Button
                 variant="danger"
-                disabled={busyAction !== null}
+                disabled={busyAction !== null || !canDecide}
                 onClick={async () => {
                   if (!finalReason.trim()) {
                     setFeedbackTone("danger");
@@ -519,6 +564,8 @@ export function AdminReviewWorkspace({ caseItem }: { caseItem: ApplicationCase }
           </CardContent>
         </Card>
       </div>
+
+      <WhatsAppDraftPanel caseItem={caseItem} />
 
       <Alert tone="primary" judul="Pengiriman keputusan">
         <p className="mb-3 text-sm leading-relaxed">
