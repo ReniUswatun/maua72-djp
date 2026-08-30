@@ -151,68 +151,6 @@ export default function PortalPage() {
           </div>
         </section>
 
-        <section className="border-t border-gray-200 bg-white">
-          <div className="container-page py-16">
-            <p className="eyebrow">Tiga peran dalam sistem</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-              Satu halaman masuk, akses sesuai peran
-            </h2>
-            <p className="mt-3 max-w-2xl text-gray-600">
-              Semua peran masuk lewat halaman <span className="font-semibold">/masuk</span> yang sama,
-              lalu diarahkan ke ruang kerjanya masing-masing.
-            </p>
-
-            <div className="mt-8 grid gap-6 lg:grid-cols-3">
-              {PERAN.map((peran) => (
-                <div
-                  key={peran.id}
-                  className="flex flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-card"
-                >
-                  <div
-                    className={
-                      "flex h-12 w-12 items-center justify-center rounded-2xl " +
-                      (peran.tone === "primary"
-                        ? "bg-primary-700 text-white"
-                        : peran.tone === "accent"
-                          ? "bg-accent-500 text-primary-900"
-                          : "bg-gray-900 text-white")
-                    }
-                  >
-                    <peran.icon className="h-6 w-6" aria-hidden />
-                  </div>
-                  <h3 className="mt-4 text-xl font-bold tracking-tight">{peran.nama}</h3>
-                  <p className="mt-1 text-sm text-gray-600">{peran.ringkas}</p>
-
-                  <ul className="mt-4 flex-1 space-y-2 text-sm text-gray-700">
-                    {peran.bisa.map((b) => (
-                      <li key={b} className="flex gap-2">
-                        <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary-400" />
-                        <span className="leading-relaxed">{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="mt-6 space-y-2">
-                    <Link href={peran.primary.href} className="block">
-                      <Button full>
-                        {peran.primary.label}
-                        <ArrowRight className="h-4 w-4" aria-hidden />
-                      </Button>
-                    </Link>
-                    {peran.secondary ? (
-                      <Link href={peran.secondary.href} className="block">
-                        <Button full variant="ghost" size="sm">
-                          {peran.secondary.label}
-                        </Button>
-                      </Link>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section className="container-page py-16">
           <div className="rounded-2xl border border-primary-100 bg-primary-50 p-8">
             <h2 className="text-xl font-bold tracking-tight text-primary-900">
