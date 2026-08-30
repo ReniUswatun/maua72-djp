@@ -147,26 +147,6 @@ Uji cepat: `tsx scripts/test-ocr.ts` (PDF contoh dibuat dengan
 ---
 
 
-## Checklist demo — Jam 72
-
-Yang harus tampil di layar saat presentasi:
-
-- **Data asli mereka, termasuk yang berantakan.** Masuk dengan akun demo dan
-  buka pengajuan yang **ditolak** — tunjukkan temuan OCR yang menandai field
-  tidak konsisten, bukan hanya contoh yang mulus.
-- **Jam sebelum, jam sesudah.** Tanpa alat ini UMKM bolak-balik revisi
-  berhari-hari karena baru tahu dokumennya salah setelah ditolak; di sini OCR
-  menandai field yang keliru sebelum dikirim. Di sisi petugas, tunjukkan timer
-  SLA di `/admin/pengajuan`.
-- **Nama pemiliknya.** Reni Uswatun — dijalankan dari server sendiri di
-  `mua-djp.reniuswatun.my.id`, dengan cadangan di `maua72-djp.vercel.app`.
-- **Bagian yang masih rusak.** Sampaikan terus terang: belum ada backend jadi
-  data hanya di `localStorage` satu browser dan tidak sinkron antar perangkat;
-  OCR bisa `gagal_baca` untuk scan buram; `pdfjs-dist` v6 tidak jalan di Node
-  pada sebagian mesin (SIGILL) sehingga uji OCR dilakukan lewat `tsx`.
-
----
-
 ## Stack
 
 | Kategori | Pilihan |
