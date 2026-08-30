@@ -79,12 +79,6 @@ export default function AdminDashboardPage() {
             verifikasi, dan pertanyaan UMKM.
           </p>
         </div>
-        <Link href="/admin/pengajuan">
-          <Button size="lg">
-            Buka Daftar Pengajuan
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </Button>
-        </Link>
       </div>
 
       <section className="grid gap-4 sm:grid-cols-3">

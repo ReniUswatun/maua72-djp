@@ -4,7 +4,12 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+# Flaky registry DNS can make `npm ci` bail ("Exit handler never called!")
+# while still exiting 0, leaving a broken node_modules. Retry once and verify.
+# Build this stage with network access to a working resolver, e.g.
+#   docker build --network=host -t siapekspor:latest .
+RUN (npm ci --no-audit --no-fund || npm ci --no-audit --no-fund) \
+  && test -x node_modules/.bin/next
 
 # ---------- builder ----------
 FROM node:20-alpine AS builder
