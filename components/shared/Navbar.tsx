@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { LayoutDashboard, Menu, ShieldCheck, X } from "lucide-react";
+import { LayoutDashboard, Menu, X } from "lucide-react";
 
 import { Logo } from "@/components/shared/Logo";
 import { Button } from "@/components/ui/button";
@@ -58,12 +58,6 @@ export function Navbar() {
               <Link href="/daftar">
                 <Button size="sm">Daftar Gratis</Button>
               </Link>
-              <Link href="/masuk?peran=admin">
-                <Button variant="outline" size="sm">
-                  <ShieldCheck className="h-4 w-4" />
-                  Admin
-                </Button>
-              </Link>
             </>
           )}
         </div>
@@ -106,11 +100,6 @@ export function Navbar() {
                   </Link>
                   <Link href="/daftar" onClick={() => setBuka(false)}>
                     <Button full>Daftar Gratis</Button>
-                  </Link>
-                  <Link href="/masuk?peran=admin" onClick={() => setBuka(false)}>
-                    <Button variant="ghost" full>
-                      Admin Login
-                    </Button>
                   </Link>
                 </>
               )}
