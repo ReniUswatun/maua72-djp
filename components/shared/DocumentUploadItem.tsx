@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { openFileInNewTab } from "@/lib/file-url";
 import { runOcr } from "@/lib/ocr-engine";
 import type { DocumentItem, DocumentOcrResult } from "@/lib/types";
 
@@ -83,9 +84,13 @@ export function DocumentUploadItem({ doc, bolehEdit, onUpload }: Props) {
               <FileText className="h-4 w-4 text-gray-400" aria-hidden />
               <span className="font-medium text-gray-900">{doc.namaFile}</span>
               {doc.fileUrl && (
-                <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="ml-1 font-semibold text-primary-700 hover:underline">
+                <button
+                  type="button"
+                  onClick={() => openFileInNewTab(doc.fileUrl)}
+                  className="ml-1 font-semibold text-primary-700 hover:underline"
+                >
                   Lihat PDF
-                </a>
+                </button>
               )}
             </div>
           )}

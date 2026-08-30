@@ -13,6 +13,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { openFileInNewTab, useViewableUrl } from "@/lib/file-url";
 import { cn, formatTanggalPendek } from "@/lib/utils";
 import { useAdminStore, useCan } from "@/store/admin-store";
 import type { ApplicationCase, DocStatus, DocumentItem } from "@/lib/types";
@@ -55,6 +56,8 @@ function PdfDialog({
   doc: DocumentItem;
   onClose: () => void;
 }) {
+  const viewUrl = useViewableUrl(doc.fileUrl);
+
   React.useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -83,11 +86,9 @@ function PdfDialog({
           </div>
           <div className="flex items-center gap-2">
             {doc.fileUrl ? (
-              <a href={doc.fileUrl} target="_blank" rel="noreferrer">
-                <Button size="sm" variant="outline">
-                  Buka di tab baru
-                </Button>
-              </a>
+              <Button size="sm" variant="outline" onClick={() => openFileInNewTab(doc.fileUrl)}>
+                Buka di tab baru
+              </Button>
             ) : null}
             <button
               type="button"
@@ -100,11 +101,23 @@ function PdfDialog({
           </div>
         </div>
         <div className="flex-1 bg-gray-100">
-          {doc.fileUrl ? (
-            <iframe title={`Pratinjau ${doc.nama}`} src={doc.fileUrl} className="h-full w-full" />
-          ) : (
+          {!doc.fileUrl ? (
             <div className="flex h-full items-center justify-center p-6 text-center text-sm text-gray-500">
               Berkas belum tersedia untuk pengajuan ini.
+            </div>
+          ) : viewUrl ? (
+            <object data={viewUrl} type="application/pdf" className="h-full w-full">
+              <iframe title={`Pratinjau ${doc.nama}`} src={viewUrl} className="h-full w-full" />
+              <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-sm text-gray-600">
+                <p>Pratinjau tidak dapat ditampilkan di sini.</p>
+                <Button size="sm" variant="outline" onClick={() => openFileInNewTab(doc.fileUrl)}>
+                  Buka di tab baru
+                </Button>
+              </div>
+            </object>
+          ) : (
+            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-gray-500">
+              Menyiapkan pratinjau…
             </div>
           )}
         </div>

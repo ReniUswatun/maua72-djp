@@ -14,6 +14,7 @@ import {
   categoryLabel,
   getCategory,
 } from "@/lib/business-categories";
+import { openFileInNewTab } from "@/lib/file-url";
 import type { BusinessProfile } from "@/lib/types";
 import { useAppStore } from "@/store/assessment-store";
 
@@ -339,12 +340,10 @@ function BerkasSlot({
 
       <div className="mt-3 flex flex-wrap gap-2">
         {file ? (
-          <a href={file} target="_blank" rel="noreferrer">
-            <Button size="sm" variant="outline">
-              <FileText className="h-4 w-4" aria-hidden />
-              Lihat
-            </Button>
-          </a>
+          <Button size="sm" variant="outline" onClick={() => openFileInNewTab(file)}>
+            <FileText className="h-4 w-4" aria-hidden />
+            Lihat
+          </Button>
         ) : null}
         <Button size="sm" variant={file ? "ghost" : "outline"} onClick={() => inputRef.current?.click()}>
           <Upload className="h-4 w-4" aria-hidden />
