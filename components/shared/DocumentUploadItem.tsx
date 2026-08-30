@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FilePreviewModal } from "@/components/shared/FilePreviewModal";
 import { runOcr } from "@/lib/ocr-engine";
+import { MAKS_UNGGAH_BYTES, periksaBerkasUnggah } from "@/lib/upload";
 import { formatTanggalPendek } from "@/lib/utils";
 import type { DocumentItem, DocumentOcrResult, OcrContext } from "@/lib/types";
 
@@ -31,12 +32,20 @@ export function DocumentUploadItem({ doc, bolehEdit, ocrContext, onUpload }: Pro
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const adaBerkas = doc.status === "diunggah" || doc.status === "diverifikasi";
   const iconCls = statusColor[doc.status] ?? statusColor.belum;
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
+
+    const pesanUkuran = periksaBerkasUnggah(file);
+    if (pesanUkuran) {
+      setError(pesanUkuran);
+      return;
+    }
+    setError(null);
     setUploading(true);
 
     const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -54,7 +63,7 @@ export function DocumentUploadItem({ doc, bolehEdit, ocrContext, onUpload }: Pro
       ocrResult = undefined;
     }
 
-    const fileUrlToStore = file.size <= 3_000_000 ? dataUrl : undefined;
+    const fileUrlToStore = file.size <= MAKS_UNGGAH_BYTES ? dataUrl : undefined;
     onUpload(doc.id, file.name, fileUrlToStore, ocrResult);
     setUploading(false);
   };
@@ -88,6 +97,9 @@ export function DocumentUploadItem({ doc, bolehEdit, ocrContext, onUpload }: Pro
             </span>
           </div>
           <p className="mt-1 text-sm text-gray-600">{doc.keterangan}</p>
+          {bolehEdit && !adaBerkas && (
+            <p className="mt-1 text-xs text-gray-400">PDF, JPG, atau PNG — maksimal 5 MB.</p>
+          )}
 
           {/* File info */}
           {doc.namaFile && (
@@ -108,6 +120,12 @@ export function DocumentUploadItem({ doc, bolehEdit, ocrContext, onUpload }: Pro
                 </span>
               )}
             </div>
+          )}
+
+          {error && (
+            <Alert tone="danger" className="mt-3 py-2">
+              <p className="text-sm">{error}</p>
+            </Alert>
           )}
 
           {/* Catatan petugas (tetap tampil agar UMKM tahu apa yang perlu diperbaiki) */}

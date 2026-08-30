@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Loader2 } from "lucide-react";
 
@@ -7,6 +8,7 @@ import { GLOSSARY_LIST } from "@/lib/glossary";
 import { usePanduanStore, usePublishedPanduan } from "@/store/panduan-store";
 import type { PanduanEntry } from "@/lib/types";
 import { PanduanRangkuman } from "./PanduanRangkuman";
+import { PanduanSearch } from "./PanduanSearch";
 
 function StepCard({
   entry,
@@ -50,6 +52,8 @@ export function PanduanReader({ embedded = false }: { embedded?: boolean }) {
   const hydrated = usePanduanStore((s) => s.hydrated);
   const entries = usePublishedPanduan();
   const basePath = embedded ? "/dashboard/panduan" : "/panduan/langkah";
+  const [query, setQuery] = React.useState("");
+  const mencari = query.trim().length > 0;
 
   if (!hydrated) {
     return (
@@ -67,7 +71,7 @@ export function PanduanReader({ embedded = false }: { embedded?: boolean }) {
       <p className="eyebrow">Panduan Ekspor</p>
       <h1 className="mt-2 text-3xl font-bold tracking-tight">Panduan ekspor, langkah demi langkah</h1>
       <p className="mt-2 max-w-2xl leading-relaxed text-gray-600">
-        Mulai dari rangkuman di bawah untuk gambaran menyeluruh, lalu buka langkah yang sedang Anda butuhkan.
+        Cari langsung apa yang Anda butuhkan lewat kotak pencarian di bawah, atau baca rangkuman dan seluruh langkahnya dari awal.
       </p>
     </div>
   ) : (
@@ -78,25 +82,31 @@ export function PanduanReader({ embedded = false }: { embedded?: boolean }) {
           Panduan ekspor, langkah demi langkah
         </h1>
         <p className="mt-4 max-w-2xl text-lg leading-relaxed text-gray-600">
-          Mulai dari rangkuman di bawah untuk gambaran menyeluruh, lalu buka langkah yang sedang Anda butuhkan.
+          Cari langsung apa yang Anda butuhkan lewat kotak pencarian di bawah, atau baca rangkuman dan seluruh langkahnya dari awal.
         </p>
       </div>
     </section>
   );
 
   const Body = (
-    <div className={embedded ? "mt-8 space-y-8" : "container-page space-y-10 py-14 sm:py-16"}>
-      <PanduanRangkuman entries={entries} basePath={basePath} />
+    <div className={embedded ? "mt-8 space-y-10" : "container-page space-y-10 py-14 sm:py-16"}>
+      <PanduanSearch entries={entries} basePath={basePath} query={query} onQuery={setQuery} />
 
-      <section>
-        <h2 className="text-2xl font-bold tracking-tight">Semua langkah panduan</h2>
-        <p className="mt-1 text-sm text-gray-600">Urut dari awal. Klik satu langkah untuk penjelasan lengkap beserta contohnya.</p>
-        <ol className="mt-5 space-y-3">
-          {entries.map((entry, i) => (
-            <StepCard key={entry.id} entry={entry} nomor={i + 1} basePath={basePath} />
-          ))}
-        </ol>
-      </section>
+      {!mencari ? (
+        <>
+          <PanduanRangkuman entries={entries} basePath={basePath} />
+
+          <section>
+            <h2 className="text-2xl font-bold tracking-tight">Semua langkah panduan</h2>
+            <p className="mt-1 text-sm text-gray-600">Urut dari awal. Klik satu langkah untuk penjelasan lengkap beserta contohnya.</p>
+            <ol className="mt-5 space-y-3">
+              {entries.map((entry, i) => (
+                <StepCard key={entry.id} entry={entry} nomor={i + 1} basePath={basePath} />
+              ))}
+            </ol>
+          </section>
+        </>
+      ) : null}
 
       <section id="glosarium" className="scroll-mt-24">
         <div className="flex items-center gap-3">

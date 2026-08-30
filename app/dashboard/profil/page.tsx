@@ -16,6 +16,7 @@ import {
 } from "@/lib/business-categories";
 import { openFileInNewTab } from "@/lib/file-url";
 import { runOcr } from "@/lib/ocr-engine";
+import { periksaBerkasUnggah } from "@/lib/upload";
 import { FilePreviewModal } from "@/components/shared/FilePreviewModal";
 import { useAppStore } from "@/store/assessment-store";
 import type { BusinessProfile } from "@/lib/types";
@@ -358,8 +359,9 @@ function BerkasSlot({
 
   const pilih = async (f: File | undefined) => {
     if (!f) return;
-    if (f.size > 3_000_000) {
-      setError("Berkas terlalu besar (maks 3 MB).");
+    const pesanUkuran = periksaBerkasUnggah(f);
+    if (pesanUkuran) {
+      setError(pesanUkuran);
       return;
     }
     setError(null);
@@ -419,6 +421,7 @@ function BerkasSlot({
         <Badge tone={file ? "success" : "neutral"}>{file ? "Terunggah" : "Belum ada"}</Badge>
       </div>
       <p className="mt-1 text-xs text-gray-500">Nomor: {nomor?.trim() ? nomor : "belum diisi"}</p>
+      {!file && <p className="mt-0.5 text-xs text-gray-400">PDF atau gambar — maksimal 5 MB.</p>}
 
       <input
         ref={inputRef}
