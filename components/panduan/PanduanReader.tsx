@@ -7,7 +7,7 @@ import { ArrowRight, BookOpen, Loader2 } from "lucide-react";
 import { GLOSSARY_LIST } from "@/lib/glossary";
 import { usePanduanStore, usePublishedPanduan } from "@/store/panduan-store";
 import type { PanduanEntry } from "@/lib/types";
-import { PanduanRangkuman } from "./PanduanRangkuman";
+
 import { PanduanSearch } from "./PanduanSearch";
 
 function StepCard({
@@ -92,20 +92,17 @@ export function PanduanReader({ embedded = false }: { embedded?: boolean }) {
     <div className={embedded ? "mt-8 space-y-10" : "container-page space-y-10 py-14 sm:py-16"}>
       <PanduanSearch entries={entries} basePath={basePath} query={query} onQuery={setQuery} />
 
-      {!mencari ? (
-        <>
-          <PanduanRangkuman entries={entries} basePath={basePath} />
 
-          <section>
-            <h2 className="text-2xl font-bold tracking-tight">Semua langkah panduan</h2>
-            <p className="mt-1 text-sm text-gray-600">Urut dari awal. Klik satu langkah untuk penjelasan lengkap beserta contohnya.</p>
-            <ol className="mt-5 space-y-3">
-              {entries.map((entry, i) => (
-                <StepCard key={entry.id} entry={entry} nomor={i + 1} basePath={basePath} />
-              ))}
-            </ol>
-          </section>
-        </>
+      {!mencari ? (
+        <section>
+          <h2 className="text-2xl font-bold tracking-tight">Semua langkah panduan</h2>
+          <p className="mt-1 text-sm text-gray-600">Urut dari awal. Klik satu langkah untuk penjelasan lengkap beserta contohnya.</p>
+          <ol className="mt-5 space-y-3">
+            {entries.map((entry, i) => (
+              <StepCard key={entry.id} entry={entry} nomor={i + 1} basePath={basePath} />
+            ))}
+          </ol>
+        </section>
       ) : null}
 
       <section id="glosarium" className="scroll-mt-24">
