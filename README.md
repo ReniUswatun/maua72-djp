@@ -1,11 +1,19 @@
-# SiapEkspor — Platform Kesiapan Ekspor UMKM
+# SiapEkspor — Pendampingan Dokumen Ekspor UMKM
 
-Frontend sisi UMKM untuk platform self-assessment kesiapan ekspor.
+Frontend prototipe untuk platform pendampingan penyusunan dokumen ekspor UMKM.
 Dibangun untuk **Hackathon Hilirisasi Maua 72 — Kantor Bea dan Cukai Surakarta**.
 
-Prototipe ini mengukur kesiapan ekspor sebuah UMKM lintas **8 pilar**, menyusun
-rekomendasi langkah lanjutan dalam bahasa awam, lalu menampilkan status
-**validasi petugas Bea dan Cukai** pada setiap rekomendasi.
+UMKM melengkapi profil usaha (termasuk berkas NIB/NPWP), membuat **pengajuan
+ekspor**, mengunggah dokumen transaksi (Invoice, Packing List, PEB, SKA), lalu
+mengirimkannya untuk **ditinjau petugas Bea dan Cukai**. Di sisi petugas, tiap
+PDF dibaca **OCR** dan dicocokkan dengan template contoh serta data pengajuan;
+petugas memberi keputusan per dokumen dan per pengajuan. Platform juga berisi
+**panduan ekspor** runtut, **konsultasi berbentuk tiket**, dan **super admin**
+untuk kelola akun admin + hak akses.
+
+> Prototipe frontend saja — belum ada backend. Seluruh data berasal dari `lib/`
+> dan disimpan di localStorage lewat store Zustand, sehingga demo tetap berjalan
+> setelah refresh.
 
 ---
 
@@ -19,26 +27,48 @@ npm run dev      # http://localhost:3000
 Perintah lain:
 
 ```bash
-npm run build    # build produksi
+npm run build    # build produksi (Next.js standalone)
 npm run start    # jalankan hasil build
 npm run lint     # eslint
 ```
 
-Butuh Node.js 18.17+ (diuji pada Node 24).
+Butuh Node.js 20+ (image Docker memakai `node:20-alpine`).
 
 ## Jalur demo tercepat
 
-Untuk melihat produk dalam kondisi terisi tanpa mengisi asesmen:
+Tanpa mengisi apa pun:
 
-1. Buka halaman depan, klik **Lihat Contoh Hasil** (atau **Masuk → Masuk sebagai
-   akun demo**).
-2. Dashboard akan terisi data usaha "Kopi Merapi Nusantara": hasil asesmen
-   Level 3, 13 rekomendasi, riwayat dua kali asesmen, dokumen, dan catatan
-   petugas — termasuk satu rekomendasi yang **disunting petugas** dan satu yang
-   **butuh info tambahan**.
+1. Di halaman depan klik **Lihat Contoh Dashboard**, atau di `/masuk` klik
+   **Masuk sebagai akun demo**.
+2. Dashboard akan terisi data "Kopi Merapi Nusantara": tiga pengajuan ekspor
+   (satu sedang direview petugas, satu ditolak dan perlu perbaikan, satu sudah
+   selesai/disetujui), riwayat timeline, dan beberapa tiket konsultasi.
 
-Jalur lengkap dari nol: `/daftar` → `/onboarding` → `/asesmen` → `/asesmen/hasil`
-→ `/dashboard`.
+Jalur lengkap dari nol: `/daftar` → `/dashboard/profil` (lengkapi data usaha +
+unggah PDF NIB) → `/dashboard/pengajuan/baru` → unggah dokumen → kirim untuk
+review.
+
+---
+
+## Peran & akun uji coba
+
+Tiga peran, satu halaman masuk (`/masuk`) **tanpa pemilih peran**. Email + kata
+sandi sudah menentukan peran; setelah login sistem otomatis mengarahkan ke area
+yang sesuai.
+
+| Peran | Email | Kata sandi | Diarahkan ke |
+|---|---|---|---|
+| UMKM (demo) | `sari@kopimerapi.id` | `umkm123` | `/dashboard` (memuat data demo) |
+| UMKM (lain) | email apa pun | bebas (mock) | `/dashboard` |
+| Admin | `ahmad.fauzi@beacukai.go.id` | `admin123` | `/admin` |
+| Admin | `retno.wulandari@beacukai.go.id` | `admin123` | `/admin` |
+| Super Admin | `dewi.lestari@beacukai.go.id` | `superadmin123` | `/super-admin` |
+
+Kredensial admin ada di `lib/admin-data.ts` (`ADMIN_CREDENTIALS`). RBAC diatur di
+`lib/rbac.ts`: `AdminGate` memblokir halaman dan `AdminShell` menyembunyikan menu
+lewat helper `roleCan()`, jadi pembatasan bukan sekadar kosmetik. Super admin
+mengubah izin peran `admin` di `/super-admin/akses` (peran `super_admin`
+terkunci).
 
 ---
 
@@ -54,9 +84,19 @@ Jalur lengkap dari nol: `/daftar` → `/onboarding` → `/asesmen` → `/asesmen
 | State | Zustand + `persist` (localStorage) |
 | Form | react-hook-form + zod |
 | Animasi | framer-motion |
+| OCR | tesseract.js + pdfjs-dist (dijalankan di sisi browser) |
 
-Belum ada backend. Seluruh data berasal dari `lib/` dan disimpan di
-localStorage lewat store Zustand, sehingga demo tetap berjalan setelah refresh.
+Tiga store Zustand terpisah, masing-masing dengan key localStorage sendiri:
+
+| Store | Key localStorage | Isi |
+|---|---|---|
+| `store/assessment-store.ts` | `siapekspor-state` | Sesi UMKM: user, profil, pengajuan, timeline, tiket |
+| `store/admin-store.ts` | `siapekspor-admin-state` | Sesi admin, daftar case, hak akses per peran |
+| `store/panduan-store.ts` | `siapekspor-panduan` | Konten panduan (CMS), seed dari `lib/panduan.ts` |
+
+Pengajuan UMKM yang sudah dikirim disalin ke daftar case admin oleh
+`components/shared/PengajuanBridge.tsx` — jembatan antar-store karena belum ada
+backend.
 
 ---
 
@@ -64,98 +104,150 @@ localStorage lewat store Zustand, sehingga demo tetap berjalan setelah refresh.
 
 ```
 app/
-├── page.tsx                      Landing page
-├── (auth)/masuk | daftar         Autentikasi (mock)
-├── onboarding/                   Profil bisnis 3 langkah
-├── asesmen/
-│   ├── page.tsx                  Intro + daftar pilar
-│   ├── [step]/                   Satu halaman per pilar (1–8)
-│   └── hasil/                    Skor, radar pilar, rekomendasi, kirim ke petugas
-├── dashboard/
-│   ├── page.tsx                  Beranda: level, perkembangan, to-do, notifikasi
-│   ├── rekomendasi/[id]/         Detail + versi AI vs versi petugas
-│   ├── dokumen/                  Checklist dokumen ekspor
-│   ├── riwayat/                  Timeline interaksi dengan petugas
-│   └── profil/                   Profil usaha (bisa diubah)
-└── panduan/[slug]/               Hub artikel + glosarium
+├── page.tsx                       Landing page
+├── portal/                        Pengantar publik + penjelasan tiga peran
+├── panduan/
+│   ├── page.tsx                   Panduan ekspor runtut (publik)
+│   ├── [slug]/                    Artikel panduan (lib/articles.ts)
+│   ├── langkah/[slug]/            Detail langkah panduan (CMS)
+│   └── dokumen/[id]/              Cara membuat tiap dokumen + flowchart
+├── (auth)/masuk | daftar          Autentikasi (mock)
+├── dashboard/                     Area UMKM
+│   ├── page.tsx                   Beranda: pengajuan terbaru, notifikasi petugas
+│   ├── pengajuan/                 Daftar + detail + form "pengajuan baru"
+│   ├── riwayat/                   Konsultasi berbentuk tiket
+│   ├── panduan/                   Panduan yang sama, di dalam shell dashboard
+│   └── profil/                    Data usaha + unggah PDF NIB & NPWP
+├── admin/(protected)/             Area admin (petugas)
+│   ├── page.tsx                   Beranda: yang perlu ditangani + status SLA
+│   ├── pengajuan/                 Antrean pengajuan + workspace review per pengajuan
+│   ├── data-usaha/                Persetujuan data usaha (NIB, NPWP, profil)
+│   ├── pertanyaan/                Inbox tiket konsultasi UMKM
+│   ├── panduan/                   CMS panduan
+│   └── riwayat/                   Riwayat & audit trail
+└── super-admin/(protected)/
+    ├── page.tsx                   Pantau kinerja admin
+    ├── akun/                      CRUD akun admin
+    ├── akses/                     Matriks hak akses peran (RBAC)
+    └── aktivitas/                 Log aktivitas admin
 
 components/
 ├── ui/                           Button, Card, Input, Badge, Progress, Alert
-├── landing/                      Hero, HowItWorks, PillarsGrid, ForWho, Footer
-├── assessment/                   QuestionCard, ProgressHeader, HelpTooltip, Option*
-├── dashboard/                    Sidebar, ReadinessScoreCard, PillarRadarChart,
-│                                 RecommendationCard, OfficerReviewBadge, TodoList
-└── shared/                       Navbar, Logo, DisclaimerBanner, Gate
+├── landing/                      Hero, HowItWorks, ForWho, Footer
+├── dashboard/                    Sidebar (+ BottomNav, DashboardTopbar)
+├── admin/                        AdminShell, AdminGate, AdminReviewWorkspace,
+│                                 DocumentReviewList, BusinessApprovalPanel,
+│                                 PanduanCmsPanel, RolePermissionMatrix,
+│                                 SuperAdminAccountsPanel, TicketInboxPanel,
+│                                 WhatsAppDraftPanel, AdminCasesTable
+├── panduan/                      PanduanReader, PanduanArticle, PanduanSearch,
+│                                 PanduanRangkuman
+└── shared/                       Navbar, Logo, DisclaimerBanner, Gate,
+                                  DocumentUploadItem, FilePreviewModal,
+                                  FlowChart, PengajuanBridge, EmptyState
 
 lib/
-├── assessment-config.ts          8 pilar + 35 pertanyaan (termasuk bercabang)
-├── scoring.ts                    Perhitungan skor, level, override, naratif
-├── recommendations.ts            Katalog 17 rekomendasi + mesin pemicu
-├── business-categories.ts        14 kategori usaha beserta trait-nya
-├── glossary.ts                   27 istilah kepabeanan untuk tooltip & glosarium
-├── articles.ts                   9 panduan
-└── mock-data.ts                  Data petugas, dokumen, timeline, akun demo
+├── types.ts                      Kontrak data domain (titik sambung backend)
+├── mock-data.ts                  Petugas, kantor, akun demo UMKM, timeline
+├── admin-data.ts                 Akun admin + kredensial + case contoh
+├── rbac.ts                       Permission, hak akses bawaan, helper roleCan()
+├── ocr-engine.ts                 Ekstraksi teks PDF + pencocokan field
+├── doc-templates.ts              Template contoh tiap jenis dokumen
+├── panduan.ts                    Seed panduan (6 tahap ekspor + 6 dokumen inti)
+├── panduan-search.ts             Pencarian panduan
+├── articles.ts                   9 artikel panduan + kategori
+├── glossary.ts                   Glosarium istilah kepabeanan (tooltip & daftar)
+├── business-categories.ts        14 kategori usaha + trait
+├── sla.ts                        Hitung keterlambatan SLA pengajuan
+├── pengajuan-status.ts           Label & warna status pengajuan
+└── ...                           wa-template, csv, upload, file-url, sample-doc,
+                                  pengajuan-bridge, admin-api, utils
 
-store/assessment-store.ts         Sumber kebenaran state di sisi klien
+scripts/
+├── generate-test-pdfs.mjs        Buat PDF contoh di file-testing-pdf/
+├── test-ocr.ts                   Uji validasi OCR terhadap PDF contoh
+└── test-panduan-search.ts        Uji pencarian panduan
 ```
 
 ---
 
-## Logika skoring
+## Alur inti
 
-```
-Skor pilar   = Σ (poin jawaban / poin maksimal × bobot pertanyaan)
-               ────────────────────────────────────────────────── × 100
-                            Σ bobot pertanyaan
+### UMKM (`/dashboard`)
 
-Skor overall = Σ (skor pilar × bobot pilar)
-```
+1. **Daftar** (nama, email, HP, kata sandi) → langsung ke dashboard.
+2. **`/dashboard/profil`** — lengkapi data usaha dan **unggah berkas PDF NIB**
+   (dan NPWP). Nomor + berkas dua-duanya wajib sebelum bisa mengajukan.
+3. **`/dashboard/pengajuan/baru`** — isi rencana ekspor: produk, HS Code, nilai
+   ekspor, pembeli, negara tujuan, tanggal kirim.
+4. Buka pengajuan, **unggah dokumen transaksi** (Commercial Invoice, Packing
+   List, PEB, SKA). Tiap PDF langsung dibaca OCR dan dicek terhadap template +
+   data pengajuan.
+5. **Kirim** untuk ditinjau. Status pengajuan: `draft` → `review` →
+   `revisi`/`ditolak` → (unggah ulang & kirim ulang) → `selesai`. Saat masih
+   `review` pengajuan bisa **ditarik** dulu untuk diperbaiki.
+6. **`/dashboard/riwayat`** — konsultasi berbentuk **ticketing**: tiap pertanyaan
+   jadi satu tiket dengan riwayat percakapan UMKM ↔ petugas.
 
-Bobot pilar: Legalitas 20%, Produk 15%, Klasifikasi 15%, Kepabeanan 15%,
-Pasar 10%, Logistik 10%, Keuangan 10%, SDM 5%.
+### Admin / petugas (`/admin`) — berpusat pada dokumen, bukan skor
 
-Level: 1 Belum Siap (<30) · 2 Tahap Awal (30–49) · 3 Sedang Berkembang (50–69)
-· 4 Hampir Siap (70–84) · 5 Siap Ekspor (85+).
+- **`/admin/pengajuan`** — antrean pengajuan; dokumen dibuka per pengajuan lewat
+  daftar yang bisa dikuncupkan (tidak ditampilkan sekaligus). Petugas menyetujui
+  atau meminta revisi tiap dokumen, menulis catatan, lalu mengambil keputusan
+  pengajuan.
+- **`/admin/data-usaha`** — persetujuan NIB / NPWP / profil, terpisah dari
+  keputusan dokumen ekspor.
+- **`/admin/pertanyaan`** — inbox tiket konsultasi; balas / tutup.
+- **`/admin/panduan`** — CMS panduan (lihat bawah).
+- **`/admin/riwayat`** — riwayat keputusan + audit trail.
+- Draf pesan **WhatsApp** untuk UMKM bisa disiapkan per pengajuan
+  (`WhatsAppDraftPanel`).
 
-**Aturan override**
+### Super admin (`/super-admin`) — hanya soal admin
 
-- Tanpa NIB, level dibatasi maksimal 2 berapa pun skor totalnya. Halaman hasil
-  menampilkan level sebelum dan sesudah pembatasan agar transparan.
-- Kategori berisiko Lartas yang belum pernah mengecek status Lartas akan
-  memunculkan *flag* khusus untuk petugas, ditampilkan di halaman hasil.
-- Produk konsumsi tanpa sertifikat apa pun dan bahan kayu tanpa SVLK juga
-  memunculkan flag.
-
-Pengujian logika ini bisa dijalankan cepat dengan mengompilasi folder `lib/`
-ke CommonJS dan memanggil `hitungHasil()` langsung dari Node.
+- **`/super-admin/akun`** — CRUD akun admin.
+- **`/super-admin/akses`** — matriks RBAC; ubah izin peran `admin`.
+- **`/super-admin/aktivitas`** — log aktivitas admin (baca saja).
+- **`/super-admin`** — ringkasan kinerja tiap admin & SLA. Super admin memantau,
+  tidak ikut memproses pengajuan.
 
 ---
 
-## Tiga hal yang jadi bobot penilaian
+## Panduan ekspor & CMS
 
-**1. Officer-in-the-loop terlihat (25%)**
+Panduan adalah **satu daftar langkah berurutan**, bukan kumpulan artikel lepas:
+6 tahap ekspor dari nol sampai barang berangkat, lalu 6 dokumen inti + cara
+mendapatkannya, plus glosarium yang bisa dikuncupkan. Isi yang sama tampil publik
+di `/panduan` dan di dalam dashboard di `/dashboard/panduan`.
 
-`OfficerReviewBadge` muncul pada setiap kartu rekomendasi, item to-do, dan
-halaman detail, dengan empat status: `pending_review`, `approved`, `edited`,
-`needs_more_info`. Pada rekomendasi berstatus `edited`, halaman detail
-menampilkan **versi draf sistem berdampingan dengan versi petugas** supaya
-pengguna tahu persis apa yang diubah. Tombol **Kirim ke Petugas** di halaman
-hasil memicu alurnya.
+**CMS** di `/admin/panduan` (izin `panduan.manage`, default untuk peran `admin`):
+tambah / sunting / hapus / urutkan / terbitkan-sembunyikan entri lewat editor
+blok (paragraf, poin, langkah, gambar, catatan, tautan). Data di
+`store/panduan-store.ts` (localStorage `siapekspor-panduan`), seed dari
+`lib/panduan.ts`. Entri inti bawaan `terkunci` — boleh disunting, tidak boleh
+dihapus (jadikan draf untuk menyembunyikan). Tombol "Kembalikan ke bawaan"
+me-reset ke seed.
 
-**2. Asesmen membedakan situasi (25%)**
+---
 
-Kategori usaha yang dipilih saat onboarding menentukan `traits`, dan `traits`
-menentukan pertanyaan bercabang. Contoh nyata: usaha kopi mendapat pertanyaan
-sertifikat halal/izin edar dan karantina, sedangkan usaha furnitur mendapat
-pertanyaan SVLK — dan rekomendasi SVLK tidak akan pernah muncul untuk usaha
-kopi. Pertanyaan bercabang ditandai lencana "Khusus kategori usaha Anda".
+## Validasi dokumen (OCR)
 
-**3. Kontinuitas (15%)**
+`lib/ocr-engine.ts` mengekstrak teks dari PDF yang diunggah (line-aware),
+menormalkannya, lalu mencocokkan field penting dengan yang seharusnya — mis. HS
+Code di Commercial Invoice harus sama dengan HS Code di pengajuan, nilai ekspor
+harus konsisten, nama usaha harus cocok. Hasilnya `DocumentOcrResult` dengan
+status `cocok` / `perlu_perbaikan` / `gagal_baca` dan daftar `temuan` per field,
+yang ditampilkan ke petugas saat review.
 
-Dashboard menyimpan riwayat setiap asesmen dan menampilkan perbandingan skor
-antar waktu beserta selisihnya. Halaman Riwayat Konsultasi merekam seluruh
-kejadian — asesmen selesai, rekomendasi ditinjau petugas, dokumen diverifikasi,
-permintaan bantuan — sebagai timeline.
+pdfjs-dist v6 aman di browser tetapi tidak jalan di Node pada sebagian mesin
+(SIGILL). Uji cepat di dalam container:
+
+```bash
+tsx scripts/test-ocr.ts             # validasi terhadap PDF di file-testing-pdf/
+tsx scripts/test-panduan-search.ts  # uji pencarian panduan
+```
+
+PDF contoh dibuat dengan `node scripts/generate-test-pdfs.mjs`.
 
 ---
 
@@ -165,99 +257,53 @@ Kontrak data ada di `lib/types.ts`. Yang perlu diganti sumber datanya:
 
 | Sekarang | Nanti |
 |---|---|
-| `MOCK_OFFICER_REVIEWS` di `lib/mock-data.ts` | `GET /rekomendasi/:id/review` |
-| `kirimKePetugas()` di store | `POST /asesmen/:id/kirim-review` |
-| `unggahDokumen()` di store | `POST /dokumen` (multipart) |
-| `MOCK_TIMELINE` | `GET /riwayat` |
-| `daftar()` / `masuk()` di store | autentikasi sungguhan |
+| `ADMIN_CREDENTIALS` / `masuk()` / `daftar()` di store | autentikasi sungguhan |
+| `PengajuanBridge` + dua store localStorage | `GET/POST /pengajuan` |
+| `unggahDokumenPengajuan()` di store | `POST /pengajuan/:id/dokumen` (multipart) |
+| `kirimPengajuan()` / `terapkanReviewAdmin()` | `POST /pengajuan/:id/kirim`, `/pengajuan/:id/review` |
+| `useAdminStore.cases` | `GET /admin/pengajuan` |
+| tiket konsultasi di store | `GET/POST /konsultasi` |
+| OCR di browser (`lib/ocr-engine.ts`) | layanan OCR di server |
+| `rolePermissions` di `admin-store` | `GET/PUT /rbac` |
 
-Bentuk `OfficerReview`, `Recommendation`, dan `TimelineEvent` sudah mengikuti
-apa yang dibutuhkan sisi petugas, jadi penggantian sumber data tidak perlu
-mengubah komponen.
+Bentuk `ApplicationCase`, `PengajuanEkspor`, `DocumentItem`,
+`ConsultationTicket`, dan `TimelineEvent` sudah mengikuti kebutuhan sisi petugas,
+jadi penggantian sumber data tidak perlu mengubah komponen.
 
 ---
 
 ## Aksesibilitas & responsif
 
-- Mobile-first; sidebar dashboard berubah menjadi bottom navigation di layar kecil.
-- Seluruh tombol dan target sentuh minimal 44 px, font body 16 px.
-- Semua input punya `<label>`, ada tautan lompat ke konten, dan focus ring yang jelas.
-- Progress bar asesmen sticky di bagian atas layar.
-- Palet warna mengikuti kombinasi navy/emas dengan kontras yang memenuhi WCAG AA
-  pada teks utama.
+- Mobile-first; sidebar dashboard & admin berubah jadi bottom navigation / menu
+  overlay di layar kecil.
+- Target sentuh minimal 44 px, font body 16 px.
+- Semua input punya `<label>`, ada tautan lompat ke konten (`#konten-utama`), dan
+  focus ring yang jelas.
+- Palet navy/emas dengan kontras yang memenuhi WCAG AA pada teks utama.
 
 ---
 
-## Peran & akses
+## Deploy
 
-Tiga peran, satu halaman masuk (`/masuk`) **tanpa pemilih peran**. Email + kata
-sandi sudah menentukan peran; setelah login sistem otomatis mengarahkan ke area
-yang sesuai.
-
-| Peran | Login | Diarahkan ke | Kredensial |
-|---|---|---|---|
-| UMKM (demo) | `sari@kopimerapi.id` | `/dashboard` | `umkm123` (memuat data demo) |
-| UMKM (lain) | email apa pun | `/dashboard` | kata sandi bebas (mock) |
-| Officer | `ahmad.fauzi@beacukai.go.id` | `/admin` | `officer123` |
-| Super Admin | `dewi.lestari@beacukai.go.id` | `/super-admin` | `superadmin123` |
-
-Kredensial admin/officer ada di `lib/admin-data.ts` (`ADMIN_CREDENTIALS`). RBAC
-diatur di `lib/rbac.ts`; super admin mengubah izin per peran di
-`/super-admin/akses`, mengelola akun (CRUD penuh) di `/super-admin/akun`, dan
-`AdminGate` memblokir halaman sekaligus `AdminShell` menyembunyikan menu.
-
-**Area UMKM** (`/dashboard`):
-
-- `/dashboard/pengajuan` — riwayat semua pengajuan ekspor + filter status. Buka
-  satu pengajuan untuk mengelola dokumen. Jika status `revisi`/`ditolak`, UMKM
-  mengunggah ulang dokumen yang ditandai lalu **kirim ulang**; saat masih
-  `review` bisa ditarik dulu untuk diperbaiki.
-- `/dashboard/riwayat` — konsultasi berbentuk **ticketing**: tiap pertanyaan jadi
-  satu tiket dengan riwayat percakapan UMKM ↔ petugas.
-- `/dashboard/profil` — data usaha + **unggah berkas PDF NIB dan NPWP**
-  (`fileNib` / `fileNpwp`), bukan hanya nomor.
-- `/dashboard/panduan` — panduan runtut (bukan kumpulan artikel) di dalam shell
-  dashboard: tahap ekspor dari nol sampai barang berangkat, lalu tiap dokumen +
-  cara mendapatkannya, plus glosarium yang bisa dikuncupkan. Isi yang sama juga
-  tampil publik di `/panduan`.
-
-**Panduan CMS** (`/admin/panduan`, izin `panduan.manage`, default officer &
-super admin): tambah / sunting / hapus / urutkan / terbitkan-sembunyikan entri
-panduan. Data di `store/panduan-store.ts` (localStorage `siapekspor-panduan`,
-seed dari `lib/panduan.ts`). Entri inti bawaan `terkunci` — boleh disunting,
-tidak boleh dihapus (jadikan draf untuk menyembunyikan). Tombol "Kembalikan ke
-bawaan" me-reset ke seed.
-
-**Alur officer** berpusat pada dokumen, bukan skor asesmen:
-
-- `/admin/pengajuan` — daftar pengajuan; dokumen dibuka per pengajuan (tidak
-  ditampilkan sekaligus) lewat daftar yang bisa dikuncupkan.
-- `/admin/data-usaha` — persetujuan data usaha (NIB, NPWP, profil) terpisah dari
-  keputusan dokumen ekspor.
-- OCR membaca tiap PDF yang diunggah UMKM dan membandingkannya dengan template
-  contoh; ketidaksesuaian menjadi catatan yang dibaca officer & super admin.
-  Metrik akurasinya di `/super-admin/akurasi-ai`.
-
-Halaman `/portal` adalah pengantar publik: penjelasan platform + tiga peran.
-
-## Menjalankan dengan Docker
+### Docker
 
 ```bash
-docker build --network=host -t siapekspor:latest .   # --network=host: host ini pakai DNS Tailscale
-docker run -d --name siapekspor -p 1555:1555 siapekspor:latest
+docker build --network=host -t siapekspor:latest .   # --network=host: resolver DNS jaringan bridge default tidak jalan di host ini
+docker run -d --name siapekspor --restart unless-stopped -p 1555:1555 siapekspor:latest
 # buka http://localhost:1555
 ```
 
 Image memakai Next.js standalone output; container listen di port **1555**
-(`ENV PORT=1555`).
+(`ENV PORT=1555`). Deploy = rebuild image lalu recreate container (belum ada
+compose file / CI).
 
-## Tunnel Cloudflare (reniuswatun.my.id)
+### Tunnel Cloudflare (reniuswatun.my.id)
 
 Named tunnel supaya domain sendiri yang dipakai:
 
 ```bash
-cloudflared tunnel login                               # pilih zona reniuswatun.my.id
-cloudflared tunnel create siapekspor                   # simpan <TUNNEL_ID>.json
+cloudflared tunnel login                           # pilih zona reniuswatun.my.id
+cloudflared tunnel create siapekspor               # simpan <TUNNEL_ID>.json
 cloudflared tunnel route dns siapekspor reniuswatun.my.id
 ```
 
@@ -287,7 +333,9 @@ cloudflared tunnel --url http://localhost:1555
 ## Catatan
 
 Angka statistik di landing page dilabeli sebagai ilustrasi, dan testimoni
-ditandai eksplisit sebagai bukan kutipan pengguna nyata. Disclaimer wajib
-tampil di footer, halaman hasil asesmen, dan setiap detail rekomendasi:
-platform ini alat bantu, dan keputusan resmi kepabeanan tetap kewenangan
-Direktorat Jenderal Bea dan Cukai.
+ditandai eksplisit sebagai bukan kutipan pengguna nyata. Disclaimer wajib tampil
+di footer dan setiap halaman panduan: platform ini alat bantu edukasi dan
+pendampingan penyusunan dokumen ekspor; panduan dan catatan sistem bersifat awal
+dan harus ditinjau petugas berwenang, dan keputusan resmi kepabeanan serta
+validitas dokumen ekspor sepenuhnya menjadi kewenangan Direktorat Jenderal Bea
+dan Cukai.
