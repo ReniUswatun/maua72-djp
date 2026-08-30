@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------ *
  * Draf pesan WhatsApp ke UMKM.
  *
- * Setelah officer mengambil keputusan, sistem menyusun draf pesan
- * bahasa awam yang tinggal ditinjau, disunting, lalu dikirim officer.
+ * Setelah admin mengambil keputusan, sistem menyusun draf pesan
+ * bahasa awam yang tinggal ditinjau, disunting, lalu dikirim admin.
  * ------------------------------------------------------------------ */
 
 import { STATUS_LABEL } from "./admin-data";

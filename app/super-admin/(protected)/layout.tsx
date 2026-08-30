@@ -7,7 +7,7 @@ export default function SuperAdminProtectedLayout({ children }: { children: Reac
       allowedRoles={["super_admin"]}
       loginHref="/masuk?peran=super_admin"
       title="Super Admin Center"
-      description="Area khusus untuk CRUD akun admin dan pengelolaan akses."
+      description="Area khusus untuk kelola akun admin, hak akses peran, dan memantau kinerja admin."
     >
       <AdminShell
         brand="Super Admin"

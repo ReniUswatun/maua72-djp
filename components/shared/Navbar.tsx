@@ -58,10 +58,10 @@ export function Navbar() {
               <Link href="/daftar">
                 <Button size="sm">Daftar Gratis</Button>
               </Link>
-              <Link href="/masuk?peran=officer">
+              <Link href="/masuk?peran=admin">
                 <Button variant="outline" size="sm">
                   <ShieldCheck className="h-4 w-4" />
-                  Officer
+                  Admin
                 </Button>
               </Link>
             </>
@@ -107,9 +107,9 @@ export function Navbar() {
                   <Link href="/daftar" onClick={() => setBuka(false)}>
                     <Button full>Daftar Gratis</Button>
                   </Link>
-                  <Link href="/masuk?peran=officer" onClick={() => setBuka(false)}>
+                  <Link href="/masuk?peran=admin" onClick={() => setBuka(false)}>
                     <Button variant="ghost" full>
-                      Officer Login
+                      Admin Login
                     </Button>
                   </Link>
                 </>

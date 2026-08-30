@@ -1,72 +1,123 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, ArrowRight, Gauge, ShieldCheck, ShieldHalf, Users } from "lucide-react";
+import { Activity, ArrowRight, ShieldHalf, Users } from "lucide-react";
 
-import { SuperAdminAccountsPanel } from "@/components/admin/SuperAdminAccountsPanel";
-import { Card, CardContent } from "@/components/ui/card";
-import { computeOcrAccuracy } from "@/lib/ai-accuracy";
-import { useAdminStore, useAdminSummary } from "@/store/admin-store";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { summarizeAdminPerformance, summarizeGovernance } from "@/lib/admin-data";
+import { formatTanggalPendek } from "@/lib/utils";
+import { useAdminStore } from "@/store/admin-store";
+import { useAppStore } from "@/store/assessment-store";
 
 const SHORTCUTS = [
+  {
+    href: "/super-admin/akun",
+    icon: Users,
+    title: "Kelola Akun",
+    desc: "Tambah, sunting, nonaktifkan, atau hapus akun admin.",
+  },
   {
     href: "/super-admin/akses",
     icon: ShieldHalf,
     title: "Hak Akses Peran",
-    desc: "Atur izin RBAC untuk officer & super admin.",
-  },
-  {
-    href: "/super-admin/akurasi-ai",
-    icon: Gauge,
-    title: "Akurasi OCR",
-    desc: "Pantau kecocokan dokumen UMKM dengan template contoh.",
+    desc: "Atur izin RBAC untuk peran admin.",
   },
   {
     href: "/super-admin/aktivitas",
     icon: Activity,
-    title: "Activity Log",
-    desc: "Rekap aktivitas akun dan audit trail case.",
+    title: "Log Aktivitas",
+    desc: "Jejak kronologis keputusan admin dan perubahan akun.",
   },
 ];
 
 export default function SuperAdminDashboardPage() {
   const accounts = useAdminStore((s) => s.accounts);
   const cases = useAdminStore((s) => s.cases);
-  const summary = useAdminSummary();
-  const officerCount = accounts.filter((account) => account.role === "officer").length;
-  const ocr = computeOcrAccuracy(cases);
+  const tickets = useAppStore((s) => s.tickets);
+
+  const governance = summarizeGovernance(cases, accounts);
+  const performance = summarizeAdminPerformance(cases, accounts, tickets);
 
   const STATS = [
-    { icon: Users, label: "Total akun", value: accounts.length, hint: "Officer dan super admin" },
-    { icon: ShieldCheck, label: "Officer aktif", value: officerCount, hint: "Siap login ke ruang kerja officer" },
-    { icon: Gauge, label: "Akurasi OCR dokumen", value: `${ocr.akurasiDokumen}%`, hint: `${ocr.diperiksa} dokumen dibaca · ${summary.total} case` },
+    { label: "Total admin", value: governance.totalAdmin, hint: "Akun peran admin" },
+    { label: "Admin aktif", value: governance.adminAktif, hint: "Bisa login ke ruang kerja" },
+    { label: "Case aktif", value: governance.caseAktif, hint: "Pengajuan berjalan" },
+    { label: "Terlambat (SLA)", value: governance.terlambat, hint: "Menunggu > 3 hari" },
   ];
 
   return (
     <div className="space-y-8">
       <div>
         <p className="eyebrow">Super Admin</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">Pusat kendali akun &amp; tata kelola</h1>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight">Pantau kinerja admin</h1>
         <p className="mt-2 max-w-2xl leading-relaxed text-gray-600">
-          Kelola akun officer, atur hak akses per peran, dan audit perubahan — tanpa menyentuh
-          alur UMKM.
+          Ringkasan apa yang sudah dikerjakan tiap admin — pengajuan yang ditangani, keputusan yang
+          diambil, dan pertanyaan UMKM yang dijawab. Super admin memantau, tidak ikut memproses.
         </p>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {STATS.map((stat) => (
           <Card key={stat.label} className="border-gray-200 shadow-none">
             <CardContent className="p-5">
-              <div className="flex items-center gap-2.5 text-gray-500">
-                <stat.icon className="h-4 w-4" aria-hidden />
-                <p className="text-sm font-medium">{stat.label}</p>
-              </div>
+              <p className="text-sm font-medium text-gray-500">{stat.label}</p>
               <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900">{stat.value}</p>
               <p className="mt-1 text-sm text-gray-600">{stat.hint}</p>
             </CardContent>
           </Card>
         ))}
       </section>
+
+      <Card className="border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-lg">Rekap per admin</CardTitle>
+          <CardDescription>Dihitung dari audit trail pengajuan dan balasan pertanyaan.</CardDescription>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          {performance.length === 0 ? (
+            <p className="py-8 text-center text-sm text-gray-500">Belum ada akun admin.</p>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50 text-xs uppercase tracking-[0.14em] text-gray-500">
+                <tr>
+                  <th className="px-4 py-3 text-left">Admin</th>
+                  <th className="px-4 py-3 text-left">Ditangani</th>
+                  <th className="px-4 py-3 text-left">Disetujui</th>
+                  <th className="px-4 py-3 text-left">Ditolak</th>
+                  <th className="px-4 py-3 text-left">Minta info</th>
+                  <th className="px-4 py-3 text-left">Tiket dijawab</th>
+                  <th className="px-4 py-3 text-left">Login terakhir</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {performance.map((row) => (
+                  <tr key={row.id} className="hover:bg-gray-50/60">
+                    <td className="px-4 py-4">
+                      <p className="font-semibold text-gray-900">{row.nama}</p>
+                      <p className="mt-1 text-xs text-gray-500">{row.email}</p>
+                    </td>
+                    <td className="px-4 py-4 text-gray-700">{row.ditangani}</td>
+                    <td className="px-4 py-4 text-gray-700">{row.disetujui}</td>
+                    <td className="px-4 py-4 text-gray-700">{row.ditolak}</td>
+                    <td className="px-4 py-4 text-gray-700">{row.mintaInfo}</td>
+                    <td className="px-4 py-4 text-gray-700">{row.tiketDijawab}</td>
+                    <td className="px-4 py-4">
+                      {row.aktif ? (
+                        <span className="text-gray-600">
+                          {row.lastLoginAt ? formatTanggalPendek(row.lastLoginAt) : "-"}
+                        </span>
+                      ) : (
+                        <Badge tone="danger">Nonaktif</Badge>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-3">
         {SHORTCUTS.map((item) => (
@@ -86,8 +137,6 @@ export default function SuperAdminDashboardPage() {
           </Link>
         ))}
       </div>
-
-      <SuperAdminAccountsPanel />
     </div>
   );
 }

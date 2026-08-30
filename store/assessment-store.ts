@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { DEMO_PROFILE, DEMO_USER, MOCK_TIMELINE } from "@/lib/mock-data";
+import { DEMO_TICKETS } from "@/lib/mock-tickets";
 import { buildSamplePdf } from "@/lib/sample-doc";
 import type {
   BusinessProfile,
@@ -73,6 +74,8 @@ interface AppState {
   // Konsultasi (ticketing)
   buatTiket: (judul: string, kategori: string, pesan: string) => string;
   balasTiket: (ticketId: string, pesan: string) => void;
+  /** Balasan dari sisi admin — memindahkan tiket ke status "dijawab". */
+  jawabTiket: (ticketId: string, pesan: string, namaAdmin: string) => void;
   tutupTiket: (ticketId: string) => void;
 
   muatDemo: () => void;
@@ -84,7 +87,7 @@ const stateAwal = {
   profile: null,
   pengajuan: [] as PengajuanEkspor[],
   timeline: [] as TimelineEvent[],
-  tickets: [] as ConsultationTicket[],
+  tickets: DEMO_TICKETS as ConsultationTicket[],
   modeDemo: false,
 };
 
@@ -311,6 +314,32 @@ export const useAppStore = create<AppState>()(
           };
         }),
 
+      jawabTiket: (ticketId, pesan, namaAdmin) =>
+        set((s) => {
+          const now = new Date().toISOString();
+          return {
+            tickets: s.tickets.map((t) =>
+              t.id === ticketId
+                ? {
+                    ...t,
+                    status: "dijawab" as const,
+                    diperbarui: now,
+                    pesan: [
+                      ...t.pesan,
+                      {
+                        id: newId("m"),
+                        dari: "petugas" as const,
+                        aktor: namaAdmin || "Admin Klinik Ekspor",
+                        pesan,
+                        tanggal: now,
+                      },
+                    ],
+                  }
+                : t,
+            ),
+          };
+        }),
+
       tutupTiket: (ticketId) =>
         set((s) => ({
           tickets: s.tickets.map((t) =>
@@ -387,49 +416,6 @@ export const useAppStore = create<AppState>()(
           }),
         };
 
-        const demoTickets: ConsultationTicket[] = [
-          {
-            id: "TK-DEMO-1",
-            judul: "Apakah produk kopi saya termasuk Lartas?",
-            kategori: "HS Code & Lartas",
-            status: "dijawab",
-            dibuat: "2026-08-20T02:00:00.000Z",
-            diperbarui: "2026-08-21T04:30:00.000Z",
-            pesan: [
-              {
-                id: "m-1",
-                dari: "umkm",
-                aktor: DEMO_USER.nama,
-                pesan: "Halo, saya mau ekspor kopi arabika roasted ke Belanda. Apakah perlu izin khusus atau termasuk barang Lartas?",
-                tanggal: "2026-08-20T02:00:00.000Z",
-              },
-              {
-                id: "m-2",
-                dari: "petugas",
-                aktor: "Retno Wulandari — Klinik Ekspor",
-                pesan: "Kopi biji sangrai (HS 0901.21) tidak termasuk Lartas ekspor. Yang perlu disiapkan: PEB, Invoice, Packing List, dan bila pembeli minta tarif preferensi, SKA Form yang sesuai. Pastikan juga kemasan mencantumkan negara asal.",
-                tanggal: "2026-08-21T04:30:00.000Z",
-              },
-            ],
-          },
-          {
-            id: "TK-DEMO-2",
-            judul: "Cara mengisi nilai FOB di PEB",
-            kategori: "Dokumen (Invoice, Packing, PEB)",
-            status: "menunggu",
-            dibuat: "2026-08-28T07:15:00.000Z",
-            diperbarui: "2026-08-28T07:15:00.000Z",
-            pesan: [
-              {
-                id: "m-3",
-                dari: "umkm",
-                aktor: DEMO_USER.nama,
-                pesan: "Di formulir PEB ada kolom nilai FOB. Apakah ini nilai barang saja atau sudah termasuk ongkos kirim ke pelabuhan?",
-                tanggal: "2026-08-28T07:15:00.000Z",
-              },
-            ],
-          },
-        ];
 
         set({
           user: DEMO_USER,
@@ -438,7 +424,7 @@ export const useAppStore = create<AppState>()(
           timeline: [...MOCK_TIMELINE].sort(
             (a, b) => +new Date(b.tanggal) - +new Date(a.tanggal),
           ),
-          tickets: demoTickets,
+          tickets: DEMO_TICKETS,
           modeDemo: true,
         });
       },
@@ -447,7 +433,15 @@ export const useAppStore = create<AppState>()(
       name: "siapekspor-state",
       storage: createJSONStorage(() => localStorage),
       partialize: ({ hydrated, ...rest }) => rest,
-      onRehydrateStorage: () => (state) => state?.setHydrated(),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        // Pastikan inbox pertanyaan tidak pernah kosong di prototipe — isi contoh
+        // bila belum ada tiket sama sekali (mis. state lama sebelum tiket di-seed).
+        if (!state.tickets || state.tickets.length === 0) {
+          state.tickets = DEMO_TICKETS;
+        }
+        state.setHydrated();
+      },
     }
   )
 );

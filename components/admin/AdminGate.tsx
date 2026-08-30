@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { PERMISSION_LABELS, roleCan, type Permission } from "@/lib/rbac";
+import { PERMISSION_LABELS, roleCan, roleLabel, type AdminRole, type Permission } from "@/lib/rbac";
 import { useAdminStore } from "@/store/admin-store";
 
 export function AdminGate({
@@ -17,7 +17,7 @@ export function AdminGate({
   requiredPermission,
 }: {
   children: React.ReactNode;
-  allowedRoles: Array<"officer" | "super_admin">;
+  allowedRoles: AdminRole[];
   loginHref: string;
   title: string;
   description: string;
@@ -54,7 +54,7 @@ export function AdminGate({
             </div>
           </div>
           <p className="mt-5 text-sm leading-relaxed text-gray-600">
-            Anda belum masuk sebagai akun officer atau super admin. Silakan login
+            Anda belum masuk sebagai akun admin atau super admin. Silakan login
             untuk melanjutkan ke halaman ini.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
@@ -83,7 +83,7 @@ export function AdminGate({
             Hak akses tidak mencukupi
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-amber-900/80">
-            Peran Anda ({session.role === "super_admin" ? "Super Admin" : "Officer"}) belum
+            Peran Anda ({roleLabel(session.role as AdminRole)}) belum
             memiliki izin <span className="font-semibold">{PERMISSION_LABELS[requiredPermission]}</span>.
             Hubungi super admin untuk penyesuaian hak akses peran.
           </p>

@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ *
  * SLA / aging indicator (fitur D2)
  *
- * Pengajuan yang menunggu tindakan officer lebih dari ambang hari akan
+ * Pengajuan yang menunggu tindakan admin lebih dari ambang hari akan
  * ditandai. Berguna untuk instansi dengan kapasitas review terbatas.
  * ------------------------------------------------------------------ */
 
@@ -11,7 +11,7 @@ import type { ApplicationCase, ReviewStage } from "./types";
 export const SLA_LIMIT_DAYS = 3;
 export const SLA_WARN_DAYS = 2;
 
-/** Status yang masih "menunggu" tindakan officer. */
+/** Status yang masih "menunggu" tindakan admin. */
 const WAITING_STATUSES: ReviewStage[] = ["baru", "direview", "membutuhkan_info"];
 
 export type SlaLevel = "aman" | "mendekati" | "terlambat" | "selesai";

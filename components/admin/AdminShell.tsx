@@ -6,12 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BadgeCheck,
   BookOpen,
-  FileText,
-  Gauge,
   LayoutDashboard,
   ListChecks,
   LogOut,
   Menu,
+  MessageSquare,
   ShieldHalf,
   Users,
   Workflow,
@@ -226,17 +225,14 @@ export const ADMIN_NAV: AdminNavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.view" },
   { href: "/admin/pengajuan", label: "Pengajuan", icon: ListChecks, permission: "case.view" },
   { href: "/admin/data-usaha", label: "Persetujuan Data Usaha", icon: BadgeCheck, permission: "case.review" },
+  { href: "/admin/pertanyaan", label: "Pertanyaan", icon: MessageSquare, permission: "ticket.view" },
   { href: "/admin/panduan", label: "Panduan (CMS)", icon: BookOpen, permission: "panduan.manage" },
   { href: "/admin/riwayat", label: "Riwayat", icon: Workflow, permission: "history.view" },
 ];
 
 export const SUPER_ADMIN_NAV: AdminNavItem[] = [
-  { href: "/super-admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/super-admin", label: "Dashboard", icon: LayoutDashboard, permission: "admin.monitor" },
   { href: "/super-admin/akun", label: "Kelola Akun", icon: Users, permission: "account.manage" },
   { href: "/super-admin/akses", label: "Hak Akses Peran", icon: ShieldHalf, permission: "rbac.manage" },
-  { href: "/super-admin/aktivitas", label: "Activity Log", icon: Workflow, permission: "activity.view" },
-  { href: "/super-admin/akurasi-ai", label: "Akurasi OCR", icon: Gauge, permission: "ai.metrics.view" },
-  { href: "/admin/pengajuan", label: "Lihat Pengajuan", icon: FileText, permission: "case.view" },
-  { href: "/admin/data-usaha", label: "Persetujuan Data Usaha", icon: BadgeCheck, permission: "case.review" },
-  { href: "/admin/panduan", label: "Panduan (CMS)", icon: BookOpen, permission: "panduan.manage" },
+  { href: "/super-admin/aktivitas", label: "Log Aktivitas", icon: Workflow, permission: "activity.view" },
 ];

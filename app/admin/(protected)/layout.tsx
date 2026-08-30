@@ -4,17 +4,16 @@ import { ADMIN_NAV, AdminShell } from "@/components/admin/AdminShell";
 export default function AdminProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
     <AdminGate
-      allowedRoles={["officer", "super_admin"]}
-      loginHref="/masuk?peran=officer"
-      title="Dashboard Officer"
-      description="Akses terproteksi untuk monitoring pengajuan, review AI Draft, dan histori keputusan."
-      requiredPermission="dashboard.view"
+      allowedRoles={["admin"]}
+      loginHref="/masuk?peran=admin"
+      title="Ruang Kerja Admin"
+      description="Akses terproteksi untuk review pengajuan, persetujuan data usaha, dokumen, dan pertanyaan UMKM."
     >
       <AdminShell
-        brand="Ruang Kerja Officer"
+        brand="Ruang Kerja Admin"
         navItems={ADMIN_NAV}
         accent="bg-primary-600"
-        loginHref="/masuk?peran=officer"
+        loginHref="/masuk?peran=admin"
       >
         {children}
       </AdminShell>

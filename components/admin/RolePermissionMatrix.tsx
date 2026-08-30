@@ -11,12 +11,13 @@ import {
   PERMISSION_GROUPS,
   PERMISSION_LABELS,
   roleCan,
+  roleLabel,
   type AdminRole,
   type Permission,
 } from "@/lib/rbac";
 import { useAdminStore } from "@/store/admin-store";
 
-const ROLES: AdminRole[] = ["officer", "super_admin"];
+const ROLES: AdminRole[] = ["admin", "super_admin"];
 
 export function RolePermissionMatrix() {
   const rolePermissions = useAdminStore((s) => s.rolePermissions);
@@ -38,8 +39,9 @@ export function RolePermissionMatrix() {
       <Card className="border-gray-200">
         <CardContent className="space-y-4 p-6">
           <Alert tone="neutral">
-            Peran <span className="font-semibold">Super Admin</span> selalu memiliki akses penuh
-            dan tidak dapat dikurangi, agar tidak ada yang mengunci diri dari sistem.
+            Peran <span className="font-semibold">Super Admin</span> memakai set izin tetap
+            (kelola akun, hak akses, pantau &amp; log aktivitas admin) dan tidak dapat diedit,
+            agar tidak ada yang mengunci diri dari sistem.
           </Alert>
           <Button
             variant="outline"
@@ -72,7 +74,7 @@ export function RolePermissionMatrix() {
                   <th className="px-3 py-3 text-left">Izin</th>
                   {ROLES.map((role) => (
                     <th key={role} className="px-3 py-3 text-center">
-                      {role === "super_admin" ? "Super Admin" : "Officer"}
+                      {roleLabel(role)}
                     </th>
                   ))}
                 </tr>
@@ -100,7 +102,7 @@ export function RolePermissionMatrix() {
                               setFeedback(
                                 `${PERMISSION_LABELS[permission]} ${
                                   event.target.checked ? "diaktifkan" : "dinonaktifkan"
-                                } untuk ${role === "super_admin" ? "Super Admin" : "Officer"}.`,
+                                } untuk ${roleLabel(role)}.`,
                               );
                             }}
                           />

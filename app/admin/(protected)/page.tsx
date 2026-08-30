@@ -1,29 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { AlarmClock, ArrowRight, BadgeCheck, ClipboardCheck, Clock3, ScanLine, ShieldCheck, Sparkles } from "lucide-react";
+import { AlarmClock, ArrowRight, BadgeCheck, MessageSquare, Sparkles } from "lucide-react";
 
-import { AdminCasesTable } from "@/components/admin/AdminCasesTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { computeOcrAccuracy } from "@/lib/ai-accuracy";
+import { Card, CardContent } from "@/components/ui/card";
 import { DATA_USAHA_LABEL, STATUS_LABEL } from "@/lib/admin-data";
-import { countOverdue, SLA_LIMIT_DAYS } from "@/lib/sla";
+import { countOverdue, SLA_LIMIT_DAYS, slaInfo, slaTone } from "@/lib/sla";
 import { formatTanggalPendek } from "@/lib/utils";
-import { useAdminStore, useAdminSummary } from "@/store/admin-store";
+import { useAdminStore } from "@/store/admin-store";
+import { useAppStore } from "@/store/assessment-store";
 
-function SummaryCard({ label, value, hint, icon: Icon }: { label: string; value: string | number; hint: string; icon: typeof ClipboardCheck }) {
+function StatCard({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  tone = "neutral",
+}: {
+  label: string;
+  value: number;
+  hint: string;
+  icon: typeof Sparkles;
+  tone?: "neutral" | "warning";
+}) {
   return (
     <Card className="border-gray-200 shadow-none">
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-gray-500">{label}</p>
-            <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900">{value}</p>
+            <p
+              className={`mt-2 text-3xl font-bold tracking-tight ${
+                tone === "warning" && value > 0 ? "text-amber-700" : "text-gray-900"
+              }`}
+            >
+              {value}
+            </p>
             <p className="mt-2 text-sm text-gray-600">{hint}</p>
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100 text-gray-700">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-600">
             <Icon className="h-5 w-5" aria-hidden />
           </div>
         </div>
@@ -34,116 +51,127 @@ function SummaryCard({ label, value, hint, icon: Icon }: { label: string; value:
 
 export default function AdminDashboardPage() {
   const cases = useAdminStore((s) => s.cases);
-  const summary = useAdminSummary();
-  const overdue = countOverdue(cases);
-  const ocr = computeOcrAccuracy(cases);
-  const recent = [...cases].sort((a, b) => +new Date(b.lastUpdatedAt) - +new Date(a.lastUpdatedAt)).slice(0, 4);
+  const tickets = useAppStore((s) => s.tickets);
 
+  const baru = cases.filter((item) => item.status === "baru").length;
   const dataUsahaMenunggu = cases.filter((item) => item.dataUsaha === "menunggu").length;
+  const overdue = countOverdue(cases);
+  const tiketMenunggu = tickets.filter((t) => t.status === "menunggu").length;
+
+  const perluDitangani = cases
+    .filter(
+      (item) =>
+        item.status === "baru" ||
+        item.status === "membutuhkan_info" ||
+        item.dataUsaha === "menunggu",
+    )
+    .sort((a, b) => +new Date(a.submittedAt) - +new Date(b.submittedAt))
+    .slice(0, 5);
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="eyebrow">Ruang Kerja Officer</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight">Monitoring pengajuan ekspor</h1>
+          <p className="eyebrow">Ruang Kerja Admin</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight">Beranda admin</h1>
           <p className="mt-2 max-w-2xl leading-relaxed text-gray-600">
-            Ringkasan pengajuan, persetujuan data usaha, dan hasil pembacaan OCR dokumen —
-            untuk membantu menentukan mana yang perlu ditangani lebih dulu.
+            Yang perlu ditangani lebih dulu — pengajuan baru, data usaha yang menunggu
+            verifikasi, dan pertanyaan UMKM.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Link href="/admin/pengajuan">
-            <Button size="lg">
-              Buka Daftar Pengajuan
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </Button>
-          </Link>
-          <Link href="/admin/data-usaha">
-            <Button size="lg" variant="outline">Persetujuan Data Usaha</Button>
-          </Link>
-        </div>
+        <Link href="/admin/pengajuan">
+          <Button size="lg">
+            Buka Daftar Pengajuan
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </Button>
+        </Link>
       </div>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <SummaryCard label="Total Pengajuan" value={summary.total} hint="Seluruh case aktif" icon={ClipboardCheck} />
-        <SummaryCard label="Baru" value={summary.baru} hint="Belum dibuka officer" icon={Sparkles} />
-        <SummaryCard label="Sedang direview" value={summary.direview} hint="Dalam proses review" icon={ShieldCheck} />
-        <SummaryCard label="Data usaha menunggu" value={dataUsahaMenunggu} hint="Perlu persetujuan officer" icon={BadgeCheck} />
-        <SummaryCard label="Terlambat (SLA)" value={overdue} hint={`Menunggu > ${SLA_LIMIT_DAYS} hari`} icon={AlarmClock} />
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2">
-        <Card className="border-gray-200">
-          <CardHeader>
-            <CardTitle className="text-lg">Sebaran status pengajuan</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            {([
-              ["baru", summary.baru],
-              ["direview", summary.direview],
-              ["disetujui", summary.disetujui],
-              ["membutuhkan_info", summary.membutuhkanInfo],
-              ["ditolak", summary.ditolak],
-            ] as const).map(([key, value]) => (
-              <div key={key} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-xs text-gray-500">{STATUS_LABEL[key]}</p>
-                <p className="mt-2 text-2xl font-bold text-gray-900">{value}</p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className="border-gray-200">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <ScanLine className="h-4 w-4 text-gray-400" aria-hidden />
-              <CardTitle className="text-lg">Hasil OCR dokumen</CardTitle>
-            </div>
-            <CardDescription>Perbandingan dokumen UMKM dengan template contoh.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-              <p className="text-xs text-gray-500">Akurasi dokumen</p>
-              <p className="mt-2 text-2xl font-bold text-gray-900">{ocr.akurasiDokumen}%</p>
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-              <p className="text-xs text-gray-500">Dokumen dibaca</p>
-              <p className="mt-2 text-2xl font-bold text-gray-900">{ocr.diperiksa}</p>
-            </div>
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-xs text-amber-700">Perlu perbaikan</p>
-              <p className="mt-2 text-2xl font-bold text-amber-900">{ocr.perluPerbaikan}</p>
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-              <p className="text-xs text-gray-500">Kolom sesuai</p>
-              <p className="mt-2 text-2xl font-bold text-gray-900">{ocr.akurasiField}%</p>
-            </div>
-          </CardContent>
-        </Card>
+      <section className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Pengajuan baru" value={baru} hint="Belum dibuka admin" icon={Sparkles} tone="warning" />
+        <StatCard
+          label="Data usaha menunggu"
+          value={dataUsahaMenunggu}
+          hint="Perlu verifikasi NIB / NPWP"
+          icon={BadgeCheck}
+          tone="warning"
+        />
+        <StatCard
+          label="Terlambat (SLA)"
+          value={overdue}
+          hint={`Menunggu lebih dari ${SLA_LIMIT_DAYS} hari`}
+          icon={AlarmClock}
+          tone="warning"
+        />
       </section>
 
       <Card className="border-gray-200">
-        <CardHeader>
-          <CardTitle className="text-lg">Aktivitas Terbaru</CardTitle>
-          <CardDescription>Pengajuan yang paling baru diperbarui.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
-          {recent.map((item) => (
-            <Link key={item.id} href={`/admin/pengajuan/${item.id}`} className="block rounded-xl border border-gray-200 p-4 transition-colors hover:border-gray-300 hover:bg-gray-50">
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-semibold text-gray-900">{item.businessName}</p>
-                <Badge tone="neutral">{STATUS_LABEL[item.status]}</Badge>
-              </div>
-              <p className="mt-1 text-sm text-gray-600">
-                Data usaha: {DATA_USAHA_LABEL[item.dataUsaha]} · {formatTanggalPendek(item.lastUpdatedAt)}
-              </p>
+        <CardContent className="p-0">
+          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <h2 className="text-lg font-semibold text-gray-900">Perlu ditangani</h2>
+            <Link href="/admin/pengajuan" className="text-sm font-semibold text-primary-700 hover:underline">
+              Lihat semua
             </Link>
-          ))}
+          </div>
+          {perluDitangani.length === 0 ? (
+            <p className="px-6 py-10 text-center text-sm text-gray-500">
+              Tidak ada pengajuan yang menunggu tindakan. 🎉
+            </p>
+          ) : (
+            <ul className="divide-y divide-gray-200">
+              {perluDitangani.map((item) => {
+                const sla = slaInfo(item);
+                return (
+                  <li key={item.id}>
+                    <Link
+                      href={`/admin/pengajuan/${item.id}`}
+                      className="flex items-center justify-between gap-4 px-6 py-4 hover:bg-gray-50"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900">{item.businessName}</p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {item.namaProduk} · {item.negaraTujuan} · masuk {formatTanggalPendek(item.submittedAt)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Badge tone="neutral">{STATUS_LABEL[item.status]}</Badge>
+                        {item.dataUsaha === "menunggu" ? (
+                          <Badge tone="warning">Data usaha: {DATA_USAHA_LABEL[item.dataUsaha]}</Badge>
+                        ) : null}
+                        {sla.level === "terlambat" ? <Badge tone={slaTone(sla.level)}>Terlambat</Badge> : null}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </CardContent>
       </Card>
 
-      <AdminCasesTable cases={cases} title="Daftar Pengajuan" description="Cari, filter, dan buka detail pengajuan dari sini." />
+      <Card className="border-gray-200">
+        <CardContent className="flex flex-wrap items-center justify-between gap-4 p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-600">
+              <MessageSquare className="h-5 w-5" aria-hidden />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">
+                {tiketMenunggu > 0
+                  ? `${tiketMenunggu} pertanyaan menunggu jawaban`
+                  : "Tidak ada pertanyaan yang menunggu"}
+              </p>
+              <p className="text-sm text-gray-600">Konsultasi dari UMKM lewat inbox pertanyaan.</p>
+            </div>
+          </div>
+          <Link href="/admin/pertanyaan">
+            <Button variant="outline" size="sm">
+              Buka Pertanyaan
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -94,7 +94,7 @@ export interface User {
 
 /* ---------- Admin ---------- */
 
-export type AppRole = "user" | "officer" | "super_admin";
+export type AppRole = "user" | "admin" | "super_admin";
 
 /** Peran admin — dipakai untuk login, RBAC, dan CRUD akun. */
 export type AdminRole = Exclude<AppRole, "user">;
@@ -119,7 +119,8 @@ export interface AdminAccount {
 export interface AuditLogEntry {
   id: string;
   timestamp: string;
-  officer: string;
+  /** Nama admin yang melakukan aksi. */
+  admin: string;
   action: string;
   field?: string;
   before?: string;

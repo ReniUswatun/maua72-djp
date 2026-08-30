@@ -75,10 +75,10 @@ function nextId(prefix: string) {
 
 function appendAudit(
   logs: AuditLogEntry[],
-  officer: string,
-  entry: Omit<AuditLogEntry, "id" | "timestamp" | "officer">,
+  admin: string,
+  entry: Omit<AuditLogEntry, "id" | "timestamp" | "admin">,
 ): AuditLogEntry[] {
-  return [{ id: nextId("audit"), timestamp: now(), officer, ...entry }, ...logs];
+  return [{ id: nextId("audit"), timestamp: now(), admin, ...entry }, ...logs];
 }
 
 function updateCase(
@@ -184,7 +184,7 @@ export const useAdminStore = create<AdminState>()(
 
       setDocStatus: (caseId, docId, status, catatan) =>
         set((state) => {
-          const officer = state.session?.nama ?? "Officer";
+          const admin = state.session?.nama ?? "Admin";
           return {
             cases: updateCase(state.cases, caseId, (current) => ({
               ...current,
@@ -194,7 +194,7 @@ export const useAdminStore = create<AdminState>()(
                   ? { ...doc, status, catatanPetugas: catatan ?? doc.catatanPetugas }
                   : doc,
               ),
-              auditTrail: appendAudit(current.auditTrail, officer, {
+              auditTrail: appendAudit(current.auditTrail, admin, {
                 action: `Status dokumen diperbarui`,
                 field: docId,
                 after: status,
@@ -206,14 +206,14 @@ export const useAdminStore = create<AdminState>()(
 
       setDataUsaha: (caseId, status, catatan) =>
         set((state) => {
-          const officer = state.session?.nama ?? "Officer";
+          const admin = state.session?.nama ?? "Admin";
           return {
             cases: updateCase(state.cases, caseId, (current) => ({
               ...current,
               dataUsaha: status,
               dataUsahaCatatan: catatan || undefined,
               lastUpdatedAt: now(),
-              auditTrail: appendAudit(current.auditTrail, officer, {
+              auditTrail: appendAudit(current.auditTrail, admin, {
                 action:
                   status === "disetujui"
                     ? "Data usaha disetujui"
@@ -230,13 +230,13 @@ export const useAdminStore = create<AdminState>()(
                   kind: "officer" as const,
                   judul:
                     status === "disetujui"
-                      ? "Data usaha disetujui officer"
+                      ? "Data usaha disetujui admin"
                       : status === "ditolak"
-                        ? "Data usaha ditolak officer"
+                        ? "Data usaha ditolak admin"
                         : "Data usaha ditinjau ulang",
                   detail: catatan || "Tidak ada catatan tambahan.",
                   tanggal: now(),
-                  aktor: officer,
+                  aktor: admin,
                 },
                 ...current.timeline,
               ],
@@ -246,13 +246,13 @@ export const useAdminStore = create<AdminState>()(
 
       setCaseDecision: (caseId, decision, reason) =>
         set((state) => {
-          const officer = state.session?.nama ?? "Officer";
+          const admin = state.session?.nama ?? "Admin";
           return {
             cases: updateCase(state.cases, caseId, (current) => ({
               ...current,
               status: decision,
               lastUpdatedAt: now(),
-              auditTrail: appendAudit(current.auditTrail, officer, {
+              auditTrail: appendAudit(current.auditTrail, admin, {
                 action: `Keputusan: ${STATUS_LABEL[decision]}`,
                 field: "status",
                 before: current.status,
@@ -265,15 +265,15 @@ export const useAdminStore = create<AdminState>()(
                   kind: "officer" as const,
                   judul:
                     decision === "disetujui"
-                      ? "Pengajuan disetujui officer"
+                      ? "Pengajuan disetujui admin"
                       : decision === "ditolak"
-                        ? "Pengajuan ditolak officer"
+                        ? "Pengajuan ditolak admin"
                         : decision === "membutuhkan_info"
-                          ? "Officer meminta info tambahan"
+                          ? "Admin meminta info tambahan"
                           : "Status pengajuan diperbarui",
                   detail: reason || "Tidak ada catatan tambahan.",
                   tanggal: now(),
-                  aktor: officer,
+                  aktor: admin,
                 },
                 ...current.timeline,
               ],
@@ -283,7 +283,7 @@ export const useAdminStore = create<AdminState>()(
 
       submitReview: (caseId) =>
         set((state) => {
-          const officer = state.session?.nama ?? "Officer";
+          const admin = state.session?.nama ?? "Admin";
           return {
             cases: updateCase(state.cases, caseId, (current) =>
               current.status === "baru"
@@ -291,7 +291,7 @@ export const useAdminStore = create<AdminState>()(
                     ...current,
                     status: "direview",
                     lastUpdatedAt: now(),
-                    auditTrail: appendAudit(current.auditTrail, officer, {
+                    auditTrail: appendAudit(current.auditTrail, admin, {
                       action: "Review dimulai",
                     }),
                   }
@@ -302,13 +302,13 @@ export const useAdminStore = create<AdminState>()(
 
       addCaseNote: (caseId, note) =>
         set((state) => {
-          const officer = state.session?.nama ?? "Officer";
+          const admin = state.session?.nama ?? "Admin";
           return {
             cases: updateCase(state.cases, caseId, (current) => ({
               ...current,
               internalNotes: [note, ...(current.internalNotes ?? [])],
               lastUpdatedAt: now(),
-              auditTrail: appendAudit(current.auditTrail, officer, {
+              auditTrail: appendAudit(current.auditTrail, admin, {
                 action: "Catatan internal ditambahkan",
                 note,
               }),
@@ -323,7 +323,7 @@ export const useAdminStore = create<AdminState>()(
     }),
     {
       name: "siapekspor-admin-state",
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
       partialize: ({ hydrated, ...rest }) => rest,
       // Naikkan versi ketika daftar permission bawaan berubah; buang

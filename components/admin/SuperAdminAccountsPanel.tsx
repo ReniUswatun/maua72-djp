@@ -20,7 +20,7 @@ import { useAdminStore, useCan } from "@/store/admin-store";
 const schema = z.object({
   nama: z.string().min(2, "Nama wajib diisi"),
   email: z.string().email("Format email belum benar"),
-  role: z.enum(["officer", "super_admin"]),
+  role: z.enum(["admin", "super_admin"]),
 });
 
 type FormValue = z.infer<typeof schema>;
@@ -41,7 +41,7 @@ export function SuperAdminAccountsPanel() {
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormValue>({
     resolver: zodResolver(schema),
-    defaultValues: { nama: "", email: "", role: "officer" },
+    defaultValues: { nama: "", email: "", role: "admin" },
   });
 
   const editing = accounts.find((account) => account.id === editingId) ?? null;
@@ -57,7 +57,7 @@ export function SuperAdminAccountsPanel() {
 
   const cancelEdit = () => {
     setEditingId(null);
-    reset({ nama: "", email: "", role: "officer" });
+    reset({ nama: "", email: "", role: "admin" });
   };
 
   const onSubmit = (value: FormValue) => {
@@ -100,7 +100,7 @@ export function SuperAdminAccountsPanel() {
         <p className="eyebrow">Super Admin</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight">Kelola akun</h1>
         <p className="mt-2 max-w-2xl leading-relaxed text-gray-600">
-          Tambah, sunting, nonaktifkan, atau hapus akun officer dan super admin.
+          Tambah, sunting, nonaktifkan, atau hapus akun admin dan super admin.
         </p>
       </div>
 
@@ -113,7 +113,7 @@ export function SuperAdminAccountsPanel() {
                 <CardDescription>
                   {editing
                     ? `Menyunting ${editing.nama}. Ubah nama, email, atau role.`
-                    : "Isi nama, email, dan role akun officer/super admin."}
+                    : "Isi nama, email, dan role akun admin atau super admin."}
                 </CardDescription>
               </div>
               {editing ? (
@@ -141,7 +141,7 @@ export function SuperAdminAccountsPanel() {
               <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
                 <Select id="role" {...register("role")}>
-                  <option value="officer">Officer</option>
+                  <option value="admin">Admin</option>
                   <option value="super_admin">Super Admin</option>
                 </Select>
                 <FieldError>{errors.role?.message}</FieldError>
@@ -186,7 +186,7 @@ export function SuperAdminAccountsPanel() {
             {accounts.length === 0 ? (
               <EmptyState
                 title="Belum ada akun admin"
-                description="Tambahkan akun officer atau super admin lewat formulir di samping."
+                description="Tambahkan akun admin atau super admin lewat formulir di samping."
               />
             ) : null}
 

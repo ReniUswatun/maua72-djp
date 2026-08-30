@@ -43,14 +43,14 @@ export function FormMasuk() {
   const onSubmit = (nilai: Nilai) => {
     setErrorPesan(null);
 
-    // Email + kata sandi sudah menentukan peran. Coba akun admin/officer dulu.
+    // Email + kata sandi sudah menentukan peran. Coba akun admin/super admin dulu.
     const asAdmin = adminLogin(nilai.email, nilai.password);
     if (asAdmin.ok) {
       router.push(asAdmin.role === "super_admin" ? "/super-admin" : "/admin");
       return;
     }
 
-    // Email terdaftar sebagai akun admin/officer tapi kata sandi salah.
+    // Email terdaftar sebagai akun admin/super admin tapi kata sandi salah.
     const isAdminEmail = adminAccounts.some(
       (account) => account.email.toLowerCase() === nilai.email.trim().toLowerCase(),
     );
@@ -138,7 +138,7 @@ export function FormMasuk() {
               UMKM — <code>{DEMO_UMKM.email}</code> / <code>{DEMO_UMKM.password}</code>
             </li>
             <li>
-              Officer — <code>ahmad.fauzi@beacukai.go.id</code> / <code>officer123</code>
+              Admin — <code>ahmad.fauzi@beacukai.go.id</code> / <code>admin123</code>
             </li>
             <li>
               Super Admin — <code>dewi.lestari@beacukai.go.id</code> / <code>superadmin123</code>

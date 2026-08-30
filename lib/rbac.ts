@@ -4,9 +4,16 @@
  * Sumber kebenaran hak akses ada di sini. `AdminGate` dan `AdminShell`
  * memakai helper `can()` untuk menyembunyikan menu sekaligus memblokir
  * halaman, jadi pembatasan tidak hanya kosmetik di UI.
+ *
+ * Dua peran:
+ * - `admin`       — semua yang berhubungan dengan UMKM/perusahaan:
+ *                   review & keputusan pengajuan, persetujuan data usaha,
+ *                   dokumen/OCR, CMS panduan, inbox pertanyaan, riwayat.
+ * - `super_admin` — hanya soal admin: CRUD akun admin, RBAC, dan
+ *                   memantau kinerja + aktivitas admin (baca saja).
  * ------------------------------------------------------------------ */
 
-export type AdminRole = "officer" | "super_admin";
+export type AdminRole = "admin" | "super_admin";
 
 export type Permission =
   | "dashboard.view"
@@ -15,11 +22,13 @@ export type Permission =
   | "case.decide"
   | "history.view"
   | "report.export"
+  | "panduan.manage"
+  | "ticket.view"
+  | "ticket.reply"
   | "account.manage"
   | "activity.view"
-  | "ai.metrics.view"
-  | "rbac.manage"
-  | "panduan.manage";
+  | "admin.monitor"
+  | "rbac.manage";
 
 export const ALL_PERMISSIONS: Permission[] = [
   "dashboard.view",
@@ -29,29 +38,33 @@ export const ALL_PERMISSIONS: Permission[] = [
   "history.view",
   "report.export",
   "panduan.manage",
+  "ticket.view",
+  "ticket.reply",
   "account.manage",
   "activity.view",
-  "ai.metrics.view",
+  "admin.monitor",
   "rbac.manage",
 ];
 
 export const PERMISSION_LABELS: Record<Permission, string> = {
   "dashboard.view": "Lihat dashboard monitoring",
   "case.view": "Lihat daftar & detail pengajuan",
-  "case.review": "Sunting draf AI & catatan review",
+  "case.review": "Sunting draf & catatan review",
   "case.decide": "Ambil keputusan (approve / tolak / minta info)",
   "history.view": "Lihat riwayat & audit trail",
   "report.export": "Ekspor laporan (CSV)",
   "panduan.manage": "Kelola konten panduan (CMS)",
-  "account.manage": "Kelola akun admin/officer",
+  "ticket.view": "Lihat pertanyaan / konsultasi UMKM",
+  "ticket.reply": "Balas & tutup pertanyaan UMKM",
+  "account.manage": "Kelola akun admin",
   "activity.view": "Lihat log aktivitas admin",
-  "ai.metrics.view": "Lihat metrik akurasi AI",
+  "admin.monitor": "Pantau performa admin",
   "rbac.manage": "Kelola hak akses peran",
 };
 
 export const PERMISSION_GROUPS: { judul: string; permissions: Permission[] }[] = [
   {
-    judul: "Officer / review pengajuan",
+    judul: "Pengajuan & UMKM",
     permissions: [
       "dashboard.view",
       "case.view",
@@ -62,18 +75,22 @@ export const PERMISSION_GROUPS: { judul: string; permissions: Permission[] }[] =
     ],
   },
   {
+    judul: "Konsultasi UMKM",
+    permissions: ["ticket.view", "ticket.reply"],
+  },
+  {
     judul: "Konten",
     permissions: ["panduan.manage"],
   },
   {
-    judul: "Super admin / tata kelola",
-    permissions: ["account.manage", "activity.view", "ai.metrics.view", "rbac.manage"],
+    judul: "Tata kelola (super admin)",
+    permissions: ["account.manage", "activity.view", "admin.monitor", "rbac.manage"],
   },
 ];
 
-/** Hak akses bawaan tiap peran. Super admin selalu penuh & tidak bisa dikurangi. */
+/** Hak akses bawaan tiap peran. Super admin punya set tetap & tidak bisa diedit. */
 export const DEFAULT_ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
-  officer: [
+  admin: [
     "dashboard.view",
     "case.view",
     "case.review",
@@ -81,8 +98,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     "history.view",
     "report.export",
     "panduan.manage",
+    "ticket.view",
+    "ticket.reply",
   ],
-  super_admin: [...ALL_PERMISSIONS],
+  super_admin: ["account.manage", "activity.view", "admin.monitor", "rbac.manage"],
 };
 
 /** Peran yang tidak boleh diedit lewat matrix (agar super admin tak mengunci diri). */
@@ -92,7 +111,7 @@ export type RolePermissionMap = Record<AdminRole, Permission[]>;
 
 export function defaultRolePermissions(): RolePermissionMap {
   return {
-    officer: [...DEFAULT_ROLE_PERMISSIONS.officer],
+    admin: [...DEFAULT_ROLE_PERMISSIONS.admin],
     super_admin: [...DEFAULT_ROLE_PERMISSIONS.super_admin],
   };
 }
@@ -112,9 +131,9 @@ export function normalizeRolePermissions(
       : [];
 
   return {
-    officer: stored.officer ? clean(stored.officer) : base.officer,
-    // Super admin selalu penuh, apa pun isi storage.
-    super_admin: [...ALL_PERMISSIONS],
+    admin: stored.admin ? clean(stored.admin) : base.admin,
+    // Super admin selalu memakai set tetap, apa pun isi storage.
+    super_admin: [...DEFAULT_ROLE_PERMISSIONS.super_admin],
   };
 }
 
@@ -128,5 +147,5 @@ export function roleCan(
 }
 
 export function roleLabel(role: AdminRole): string {
-  return role === "super_admin" ? "Super Admin" : "Officer";
+  return role === "super_admin" ? "Super Admin" : "Admin";
 }

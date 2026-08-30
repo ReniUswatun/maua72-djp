@@ -4,16 +4,18 @@ import type {
   AdminAccount,
   ApplicationCase,
   AuditLogEntry,
+  ConsultationTicket,
   DocumentItem,
   DocumentOcrResult,
   OcrFieldCheck,
   ReviewStage,
   TimelineEvent,
 } from "./types";
+import { countOverdue } from "./sla";
 
 /* ------------------------------------------------------------------ *
- * Data admin — daftar akun officer/super admin + pengajuan ekspor
- * UMKM yang masuk ke meja officer. Semua ini pengganti backend.
+ * Data admin — daftar akun admin/super admin + pengajuan ekspor
+ * UMKM yang masuk ke meja admin. Semua ini pengganti backend.
  * ------------------------------------------------------------------ */
 
 export const ADMIN_ACCOUNTS: AdminAccount[] = [
@@ -21,7 +23,7 @@ export const ADMIN_ACCOUNTS: AdminAccount[] = [
     id: "off-001",
     nama: PETUGAS[0].nama,
     email: "ahmad.fauzi@beacukai.go.id",
-    role: "officer",
+    role: "admin",
     aktif: true,
     lastLoginAt: "2026-08-29T08:10:00.000Z",
   },
@@ -29,7 +31,7 @@ export const ADMIN_ACCOUNTS: AdminAccount[] = [
     id: "off-002",
     nama: PETUGAS[1].nama,
     email: "retno.wulandari@beacukai.go.id",
-    role: "officer",
+    role: "admin",
     aktif: true,
     lastLoginAt: "2026-08-28T14:40:00.000Z",
   },
@@ -49,16 +51,16 @@ export const ADMIN_CREDENTIALS: {
   password: string;
   role: AdminAccount["role"];
 }[] = [
-  { email: "ahmad.fauzi@beacukai.go.id", password: "officer123", role: "officer" },
-  { email: "retno.wulandari@beacukai.go.id", password: "officer123", role: "officer" },
+  { email: "ahmad.fauzi@beacukai.go.id", password: "admin123", role: "admin" },
+  { email: "retno.wulandari@beacukai.go.id", password: "admin123", role: "admin" },
   { email: "dewi.lestari@beacukai.go.id", password: "superadmin123", role: "super_admin" },
 ];
 
-function audit(action: string, officer: string, note?: string): AuditLogEntry {
+function audit(action: string, admin: string, note?: string): AuditLogEntry {
   return {
     id: `audit-${action.slice(0, 6)}-${Math.random().toString(36).slice(2, 7)}`,
     timestamp: "2026-08-28T02:00:00.000Z",
-    officer,
+    admin,
     action,
     note,
   };
@@ -269,7 +271,7 @@ function buildCase(seed: CaseSeed): ApplicationCase {
     nilaiEkspor: seed.nilaiEkspor,
     documents: seed.documents,
     timeline: [...seed.timeline].sort((a, b) => +new Date(a.tanggal) - +new Date(b.tanggal)),
-    auditTrail: [audit("Pengajuan masuk ke meja officer", PETUGAS[0].nama, `Data dari ${seed.ownerName} diterima.`)],
+    auditTrail: [audit("Pengajuan masuk ke meja admin", PETUGAS[0].nama, `Data dari ${seed.ownerName} diterima.`)],
     internalNotes: seed.internalNotes,
   };
 }
@@ -373,7 +375,7 @@ export const ADMIN_CASES: ApplicationCase[] = [
       {
         id: "tl-pangan-2",
         kind: "officer",
-        judul: "Pengajuan disetujui officer",
+        judul: "Pengajuan disetujui admin",
         detail: "Dokumen lengkap dan OCR cocok dengan template.",
         tanggal: "2026-08-28T05:10:00.000Z",
         aktor: "Ahmad Fauzi",
@@ -411,7 +413,7 @@ export const ADMIN_CASES: ApplicationCase[] = [
       {
         id: "tl-kosmetik-2",
         kind: "officer",
-        judul: "Officer meminta info tambahan",
+        judul: "Admin meminta info tambahan",
         detail: "Perlu NPWP badan usaha dan komposisi produk untuk cek Lartas.",
         tanggal: "2026-08-29T01:10:00.000Z",
         aktor: "Retno Wulandari",
@@ -442,12 +444,12 @@ export const ADMIN_CASES: ApplicationCase[] = [
         id: "tl-herbal-1",
         kind: "asesmen",
         judul: "Pengajuan ekspor dikirim",
-        detail: "Menunggu giliran review officer.",
+        detail: "Menunggu giliran review admin.",
         tanggal: "2026-08-29T01:05:00.000Z",
         aktor: "Agus Prasetyo",
       },
     ],
-    internalNotes: ["Menunggu giliran review officer."],
+    internalNotes: ["Menunggu giliran review admin."],
   }),
 ];
 
@@ -477,3 +479,82 @@ export const DATA_USAHA_LABEL: Record<ApplicationCase["dataUsaha"], string> = {
   disetujui: "Disetujui",
   ditolak: "Ditolak",
 };
+
+/* ---------- Pantauan performa admin (untuk super admin) ---------- */
+
+export interface AdminPerformanceRow {
+  id: string;
+  nama: string;
+  email: string;
+  aktif: boolean;
+  lastLoginAt?: string;
+  /** Jumlah pengajuan yang pernah disentuh admin ini (muncul di audit trail). */
+  ditangani: number;
+  disetujui: number;
+  ditolak: number;
+  mintaInfo: number;
+  /** Pertanyaan UMKM yang dibalas admin ini. */
+  tiketDijawab: number;
+}
+
+/**
+ * Rekap kerja tiap admin dari audit trail pengajuan + balasan tiket.
+ * Dipakai super admin untuk memantau (baca saja) kinerja admin.
+ */
+export function summarizeAdminPerformance(
+  cases: ApplicationCase[],
+  accounts: AdminAccount[],
+  tickets: ConsultationTicket[] = [],
+): AdminPerformanceRow[] {
+  return accounts
+    .filter((account) => account.role === "admin")
+    .map((account) => {
+      const nama = account.nama;
+      let ditangani = 0;
+      let disetujui = 0;
+      let ditolak = 0;
+      let mintaInfo = 0;
+
+      for (const item of cases) {
+        const mine = item.auditTrail.filter((entry) => entry.admin === nama);
+        if (mine.length === 0) continue;
+        ditangani += 1;
+        for (const entry of mine) {
+          if (!entry.action.startsWith("Keputusan:")) continue;
+          if (entry.after === "disetujui") disetujui += 1;
+          else if (entry.after === "ditolak") ditolak += 1;
+          else if (entry.after === "membutuhkan_info") mintaInfo += 1;
+        }
+      }
+
+      const tiketDijawab = tickets.filter((ticket) =>
+        ticket.pesan.some(
+          (pesan) => pesan.dari === "petugas" && pesan.aktor.startsWith(nama),
+        ),
+      ).length;
+
+      return {
+        id: account.id,
+        nama,
+        email: account.email,
+        aktif: account.aktif,
+        lastLoginAt: account.lastLoginAt,
+        ditangani,
+        disetujui,
+        ditolak,
+        mintaInfo,
+        tiketDijawab,
+      };
+    });
+}
+
+/** Ringkasan global untuk header dashboard super admin. */
+export function summarizeGovernance(cases: ApplicationCase[], accounts: AdminAccount[]) {
+  const admins = accounts.filter((account) => account.role === "admin");
+  return {
+    totalAdmin: admins.length,
+    adminAktif: admins.filter((account) => account.aktif).length,
+    caseAktif: cases.length,
+    terlambat: countOverdue(cases),
+  };
+}

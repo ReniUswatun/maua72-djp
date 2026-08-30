@@ -35,7 +35,7 @@ export default function SuperAdminActivityPage() {
         kind: "audit",
         title: entry.action,
         detail: [item.businessName, entry.field, entry.note].filter(Boolean).join(" · "),
-        actor: entry.officer,
+        actor: entry.admin,
         date: entry.timestamp,
       })),
     ),

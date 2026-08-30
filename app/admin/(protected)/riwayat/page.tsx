@@ -43,7 +43,7 @@ export default function AdminHistoryPage() {
         kind: "audit" as const,
         title: entry.action,
         detail: [entry.field, entry.before, entry.after, entry.note].filter(Boolean).join(" · "),
-        actor: entry.officer,
+        actor: entry.admin,
         date: entry.timestamp,
       })),
     ])
@@ -52,10 +52,10 @@ export default function AdminHistoryPage() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="eyebrow">Ruang Kerja Officer</p>
+        <p className="eyebrow">Ruang Kerja Admin</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight">Riwayat &amp; jejak audit</h1>
         <p className="mt-2 max-w-2xl leading-relaxed text-gray-600">
-          Semua kejadian pada pengajuan UMKM dan setiap keputusan petugas, tersusun dari yang
+          Semua kejadian pada pengajuan UMKM dan setiap keputusan admin, tersusun dari yang
           terbaru — untuk memudahkan menelusuri kembali.
         </p>
       </div>
