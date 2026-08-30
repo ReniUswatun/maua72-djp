@@ -118,11 +118,6 @@ export default function PortalPage() {
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Button>
               </Link>
-              <Link href="/masuk">
-                <Button size="lg" variant="outline">
-                  Masuk
-                </Button>
-              </Link>
             </div>
           </div>
         </section>
