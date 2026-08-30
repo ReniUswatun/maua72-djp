@@ -217,6 +217,24 @@ export interface DocumentOcrResult {
   /** Nama template contoh yang dijadikan acuan. */
   template: string;
   temuan: OcrFieldCheck[];
+  /** Cuplikan teks mentah hasil pembacaan — agar admin bisa membandingkan dengan PDF. */
+  teksMentah?: string;
+}
+
+/**
+ * Data pengajuan/usaha yang dipakai OCR untuk mencocokkan isi dokumen
+ * dengan yang seharusnya (mis. HS Code di invoice harus sama dengan HS Code
+ * yang diisi di pengajuan).
+ */
+export interface OcrContext {
+  namaUsaha?: string;
+  nomorNib?: string;
+  nomorNpwp?: string;
+  hsCode?: string;
+  nilaiEkspor?: string;
+  negaraTujuan?: string;
+  namaProduk?: string;
+  pembeli?: string;
 }
 
 /* ---------- Riwayat / Timeline ---------- */

@@ -17,7 +17,7 @@ const SEGMEN = [
     judul: "UMKM Pemula",
     sub: "Belum pernah ekspor",
     detail:
-      "Anda punya produk bagus tapi belum tahu harus mulai dari mana. Asesmen akan menunjukkan fondasi apa yang perlu dibereskan lebih dulu.",
+      "Anda punya produk bagus tapi belum tahu harus mulai dari mana. Panduannya menunjukkan fondasi apa yang perlu dibereskan lebih dulu.",
   },
   {
     icon: TrendingUp,
@@ -38,27 +38,27 @@ const SEGMEN = [
 const MANFAAT = [
   {
     icon: ClipboardList,
-    judul: "Skor kesiapan dengan 5 level",
+    judul: "Checklist dokumen sesuai produk",
     detail:
-      "Bukan sekadar angka — setiap level menjelaskan apa arti posisi Anda dan apa fokus berikutnya.",
-  },
-  {
-    icon: Sparkles,
-    judul: "Rekomendasi terpersonalisasi",
-    detail:
-      "Pertanyaan bercabang sesuai kategori usaha, sehingga saran yang muncul relevan dengan produk Anda.",
+      "Begitu pengajuan dibuat, Anda tahu persis dokumen apa yang wajib dan mana yang opsional untuk produk dan negara tujuan Anda.",
   },
   {
     icon: FileCheck2,
-    judul: "Panduan langkah demi langkah PEB",
+    judul: "Panduan tiap dokumen, bahasa awam",
     detail:
-      "Dari penentuan HS Code sampai terbitnya Nota Pelayanan Ekspor, dijelaskan dengan bahasa awam.",
+      "Dari penentuan HS Code sampai terbitnya Nota Pelayanan Ekspor — cara membuat setiap dokumen dijelaskan langkah demi langkah.",
+  },
+  {
+    icon: Sparkles,
+    judul: "Rangkuman panduan oleh AI",
+    detail:
+      "Asisten merangkum seluruh panduan yang disusun petugas jadi satu ikhtisar, jadi Anda tidak perlu membuka halaman satu per satu.",
   },
   {
     icon: MessageSquareQuote,
     judul: "Akses konsultasi petugas",
     detail:
-      "Setiap rekomendasi ditinjau petugas Bea Cukai, dan Anda bisa meminta pendampingan langsung.",
+      "Setiap dokumen ditinjau petugas Bea Cukai, dan Anda bisa mengajukan pertanyaan konsultasi langsung dari dashboard.",
   },
 ];
 
@@ -99,12 +99,12 @@ export function YangDidapat() {
           <div className="lg:col-span-5">
             <p className="eyebrow">Yang Anda Dapatkan</p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight">
-              Bukan sekadar hasil tes, tapi rencana kerja
+              Bukan sekadar daftar dokumen, tapi pendampingan
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-gray-600">
-              Hasil asesmen dirancang untuk langsung bisa dikerjakan: apa yang
-              harus diurus, ke mana mengurusnya, dan berapa lama perkiraan
-              waktunya.
+              Setiap langkah dirancang untuk langsung bisa dikerjakan: dokumen apa
+              yang harus dibuat, ke mana mengurusnya, dan petugas yang mengecek
+              sebelum Anda tindak lanjuti.
             </p>
           </div>
 
@@ -171,8 +171,8 @@ export function CtaAkhir() {
           Mulai Perjalanan Ekspor Anda Hari Ini
         </h2>
         <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-primary-100">
-          Sepuluh menit untuk mengetahui posisi usaha Anda, dan daftar langkah
-          yang sudah ditinjau petugas Bea dan Cukai.
+          Daftar gratis, susun dokumen ekspor Anda langkah demi langkah, dan
+          kirimkan untuk ditinjau petugas Bea dan Cukai.
         </p>
         <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
           <Link href="/daftar">

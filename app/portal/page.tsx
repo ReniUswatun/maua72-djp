@@ -19,27 +19,27 @@ import { KANTOR } from "@/lib/mock-data";
 export const metadata: Metadata = {
   title: "Tentang Platform",
   description:
-    "SiapEkspor: platform asesmen kesiapan ekspor UMKM dengan validasi petugas Bea dan Cukai. Kenali tiga peran dalam sistem dan cara masuk.",
+    "SiapEkspor: pendampingan penyusunan dokumen ekspor UMKM dengan peninjauan petugas Bea dan Cukai. Kenali tiga peran dalam sistem dan cara masuk.",
 };
 
 const LANGKAH = [
   {
     icon: ClipboardCheck,
-    judul: "UMKM mengisi pengajuan",
-    teks: "Data usaha, rencana ekspor, dan unggahan dokumen diisi dalam bahasa awam.",
-  },
-  {
-    icon: Sparkles,
-    judul: "OCR membaca dokumen",
-    teks: "Setiap dokumen PDF yang diunggah dibandingkan dengan template contoh. Bagian yang tidak sesuai ditandai sebagai catatan.",
-  },
-  {
-    icon: ShieldCheck,
-    judul: "Admin meninjau",
-    teks: "Admin memeriksa data usaha dan dokumen beserta catatan OCR, lalu mengambil keputusan: setujui, tolak, atau minta info.",
+    judul: "UMKM melengkapi profil & pengajuan",
+    teks: "Data usaha, NIB/NPWP, lalu rencana ekspor (produk, tujuan, pembeli, HS Code) diisi dalam bahasa awam.",
   },
   {
     icon: FileCheck2,
+    judul: "UMKM menyusun & mengunggah dokumen",
+    teks: "Mengikuti checklist dan panduan tiap dokumen — Invoice, Packing List, SKA, sampai PEB.",
+  },
+  {
+    icon: ShieldCheck,
+    judul: "Petugas meninjau",
+    teks: "Admin memeriksa data usaha dan tiap dokumen (dibantu pembacaan otomatis), lalu memutuskan: setujui, tolak, atau minta perbaikan.",
+  },
+  {
+    icon: Sparkles,
     judul: "UMKM menerima hasil",
     teks: "Keputusan dan catatan petugas dikirim ke UMKM, termasuk daftar dokumen yang perlu diperbaiki.",
   },
@@ -52,10 +52,10 @@ const PERAN = [
     nama: "UMKM",
     ringkas: "Pemilik usaha yang ingin menembus pasar ekspor.",
     bisa: [
-      "Isi asesmen kesiapan ekspor 8 pilar",
-      "Lihat skor, level kesiapan, dan rekomendasi",
-      "Terima rekomendasi yang sudah divalidasi petugas",
-      "Pantau dokumen dan riwayat konsultasi",
+      "Lengkapi profil usaha & unggah NIB/NPWP",
+      "Buat pengajuan ekspor dengan checklist dokumen",
+      "Ikuti panduan cara membuat tiap dokumen",
+      "Terima catatan petugas & ajukan konsultasi",
     ],
     primary: { label: "Daftar gratis", href: "/daftar" },
     secondary: { label: "Sudah punya akun — masuk", href: "/masuk?peran=umkm" },
@@ -104,13 +104,12 @@ export default function PortalPage() {
               Kantor Bea dan Cukai Surakarta
             </Badge>
             <h1 className="mt-4 max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl">
-              Platform kesiapan ekspor UMKM, dengan petugas tetap di dalam keputusan
+              Pendampingan dokumen ekspor UMKM, dengan petugas tetap di dalam keputusan
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray-600">
-              SiapEkspor membantu UMKM mengukur kesiapan ekspornya lewat asesmen 8 pilar,
-              lalu menyusun rekomendasi langkah lanjutan dalam bahasa awam. Setiap rekomendasi
-              divalidasi petugas Bea dan Cukai sebelum sampai ke pemilik usaha — sistem
-              menyusun draf, keputusan tetap pada petugas.
+              SiapEkspor menuntun UMKM menyusun setiap dokumen ekspor — dari NIB sampai PEB —
+              dalam bahasa awam, lengkap dengan panduan tiap dokumen. Setiap berkas ditinjau
+              petugas Bea dan Cukai sebelum pengajuan disetujui; keputusan tetap pada petugas.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/daftar">
@@ -176,7 +175,7 @@ export default function PortalPage() {
                         ? "bg-primary-700 text-white"
                         : peran.tone === "accent"
                           ? "bg-accent-500 text-primary-900"
-                          : "bg-slate-900 text-white")
+                          : "bg-gray-900 text-white")
                     }
                   >
                     <peran.icon className="h-6 w-6" aria-hidden />
@@ -220,11 +219,10 @@ export default function PortalPage() {
               Kenapa selalu ada petugas di dalam keputusan?
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-relaxed text-primary-900/80">
-              Rekomendasi yang salah atau terlalu percaya diri bisa membuat sebuah usaha
-              membuang waktu dan biaya. Karena itu draf AI di sini selalu menampilkan alasan
-              di balik skornya dan menandai ketika keyakinannya rendah, dan tidak ada
-              pengajuan yang bisa disetujui otomatis tanpa petugas. Prototipe ini dikembangkan
-              bersama {KANTOR.nama}.
+              Dokumen ekspor yang salah bisa membuat sebuah usaha membuang waktu dan biaya.
+              Karena itu pembacaan otomatis di sini hanya berupa catatan bantu untuk petugas —
+              tidak ada pengajuan yang bisa disetujui otomatis tanpa petugas memeriksanya
+              sendiri. Prototipe ini dikembangkan bersama {KANTOR.nama}.
             </p>
           </div>
         </section>

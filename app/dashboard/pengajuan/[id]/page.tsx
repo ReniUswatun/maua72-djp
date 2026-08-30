@@ -14,10 +14,11 @@ import { DocumentUploadItem } from "@/components/shared/DocumentUploadItem";
 import { PENGAJUAN_STATUS_LABEL, bisaDiperbaiki, pengajuanStatusClass } from "@/lib/pengajuan-status";
 import { formatTanggalPendek } from "@/lib/utils";
 import { useAppStore } from "@/store/assessment-store";
-import type { DocumentOcrResult } from "@/lib/types";
+import type { DocumentOcrResult, OcrContext } from "@/lib/types";
 
 export default function PengajuanDetailPage({ params }: { params: { id: string } }) {
   const pengajuan = useAppStore((s) => s.pengajuan.find((p) => p.id === params.id));
+  const profile = useAppStore((s) => s.profile);
   const unggah = useAppStore((s) => s.unggahDokumenPengajuan);
   const kirim = useAppStore((s) => s.kirimPengajuan);
   const tarik = useAppStore((s) => s.tarikPengajuan);
@@ -27,6 +28,17 @@ export default function PengajuanDetailPage({ params }: { params: { id: string }
   }
 
   const { dokumen, status } = pengajuan;
+
+  const ocrContext: OcrContext = {
+    namaUsaha: profile?.namaUsaha,
+    nomorNib: profile?.nomorNib,
+    nomorNpwp: profile?.nomorNpwp,
+    hsCode: pengajuan.hsCode,
+    nilaiEkspor: pengajuan.nilaiEkspor,
+    negaraTujuan: pengajuan.negaraTujuan,
+    namaProduk: pengajuan.namaProduk,
+    pembeli: pengajuan.pembeli,
+  };
   const bolehEdit = bisaDiperbaiki(status);
   const semuaWajibDiupload = dokumen
     .filter((d) => d.wajib)
@@ -125,6 +137,7 @@ export default function PengajuanDetailPage({ params }: { params: { id: string }
               doc={d}
               pengajuanId={pengajuan.id}
               bolehEdit={bolehEdit}
+              ocrContext={ocrContext}
               onUpload={handleUpload}
             />
           ))}

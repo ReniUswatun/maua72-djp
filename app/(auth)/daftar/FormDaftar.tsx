@@ -137,8 +137,8 @@ export function FormDaftar() {
               <span className="font-semibold text-primary-700">
                 Syarat &amp; Kebijakan Privasi
               </span>
-              , termasuk pembagian hasil asesmen kepada petugas Bea dan Cukai
-              untuk keperluan validasi.
+              , termasuk pembagian data pengajuan dan dokumen kepada petugas Bea
+              dan Cukai untuk keperluan peninjauan.
             </span>
           </label>
           <FieldError>{errors.setuju?.message}</FieldError>

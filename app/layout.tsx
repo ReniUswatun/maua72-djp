@@ -11,23 +11,23 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "SiapEkspor — Platform Kesiapan Ekspor UMKM",
+    default: "SiapEkspor — Pendampingan Dokumen Ekspor UMKM",
     template: "%s · SiapEkspor",
   },
   description:
-    "Cek kesiapan ekspor usaha Anda dalam 10 menit. Dapatkan skor kesiapan, rekomendasi personal, dan validasi langsung dari petugas Bea dan Cukai Surakarta.",
+    "Susun dokumen ekspor UMKM Anda langkah demi langkah — dari NIB sampai PEB — dan kirimkan untuk ditinjau langsung oleh petugas Bea dan Cukai Surakarta.",
   keywords: [
     "ekspor UMKM",
-    "kesiapan ekspor",
+    "dokumen ekspor",
     "Bea Cukai Surakarta",
     "PEB",
     "HS Code",
-    "asesmen ekspor",
+    "panduan ekspor",
   ],
   openGraph: {
-    title: "SiapEkspor — Platform Kesiapan Ekspor UMKM",
+    title: "SiapEkspor — Pendampingan Dokumen Ekspor UMKM",
     description:
-      "Asesmen kesiapan ekspor 8 pilar untuk UMKM Indonesia, divalidasi petugas Bea dan Cukai.",
+      "Pendampingan penyusunan dokumen ekspor untuk UMKM Indonesia, ditinjau langsung oleh petugas Bea dan Cukai.",
     locale: "id_ID",
     type: "website",
   },

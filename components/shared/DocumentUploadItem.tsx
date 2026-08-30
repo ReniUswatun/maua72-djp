@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button";
 import { FilePreviewModal } from "@/components/shared/FilePreviewModal";
 import { runOcr } from "@/lib/ocr-engine";
 import { formatTanggalPendek } from "@/lib/utils";
-import type { DocumentItem, DocumentOcrResult } from "@/lib/types";
+import type { DocumentItem, DocumentOcrResult, OcrContext } from "@/lib/types";
 
 interface Props {
   doc: DocumentItem;
   pengajuanId: string;
   bolehEdit: boolean;
+  /** Data pengajuan/usaha untuk pencocokan silang OCR. */
+  ocrContext?: OcrContext;
   onUpload: (docId: string, namaFile: string, fileUrl?: string, ocr?: DocumentOcrResult) => void;
 }
 
@@ -25,7 +27,7 @@ const statusColor = {
   belum:        "bg-gray-100 text-gray-400",
 };
 
-export function DocumentUploadItem({ doc, bolehEdit, onUpload }: Props) {
+export function DocumentUploadItem({ doc, bolehEdit, ocrContext, onUpload }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(false);
@@ -47,7 +49,7 @@ export function DocumentUploadItem({ doc, bolehEdit, onUpload }: Props) {
     // OCR runs silently in the background — result saved to store for admin only
     let ocrResult: DocumentOcrResult | undefined;
     try {
-      ocrResult = await runOcr(doc.id, file, dataUrl);
+      ocrResult = await runOcr(doc.id, file, dataUrl, ocrContext);
     } catch {
       ocrResult = undefined;
     }

@@ -160,7 +160,7 @@ function OcrPanel({ doc }: { doc: DocumentItem }) {
             <tr>
               <th className="px-3 py-2 text-left">Kolom</th>
               <th className="px-3 py-2 text-left">Terbaca di PDF</th>
-              <th className="px-3 py-2 text-left">Sesuai template</th>
+              <th className="px-3 py-2 text-left">Cocok dengan template / pengajuan</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -170,8 +170,14 @@ function OcrPanel({ doc }: { doc: DocumentItem }) {
                 <td className="px-3 py-2 text-gray-600">{temuan.terbaca || "-"}</td>
                 <td className="px-3 py-2">
                   {temuan.sesuai ? (
-                    <span className="inline-flex items-center gap-1 text-green-700">
-                      <CheckCircle2 className="h-4 w-4" aria-hidden /> Cocok
+                    <span className="inline-flex items-start gap-1 text-green-700">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                      <span>
+                        Cocok
+                        {temuan.catatan ? (
+                          <span className="block text-xs font-normal text-amber-700">{temuan.catatan}</span>
+                        ) : null}
+                      </span>
                     </span>
                   ) : (
                     <span className="inline-flex items-start gap-1 text-amber-800">
@@ -188,6 +194,17 @@ function OcrPanel({ doc }: { doc: DocumentItem }) {
           </tbody>
         </table>
       </div>
+
+      {ocr.teksMentah ? (
+        <details className="rounded-lg border border-gray-200 bg-white">
+          <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-gray-600">
+            Lihat teks mentah hasil pembacaan (bandingkan dengan PDF)
+          </summary>
+          <pre className="max-h-64 overflow-auto whitespace-pre-wrap border-t border-gray-200 px-3 py-2 text-[11px] leading-relaxed text-gray-600">
+            {ocr.teksMentah}
+          </pre>
+        </details>
+      ) : null}
     </div>
   );
 }

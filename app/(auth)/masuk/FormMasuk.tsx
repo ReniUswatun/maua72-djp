@@ -153,8 +153,8 @@ export function FormMasuk() {
 
       <Alert tone="primary" judul="Sedang menilai prototipe ini?">
         <p className="mb-3">
-          Masuk dengan data demo untuk langsung melihat dashboard berisi hasil asesmen,
-          rekomendasi yang sudah divalidasi petugas, dan riwayat konsultasi.
+          Masuk dengan data demo untuk langsung melihat dashboard berisi contoh pengajuan
+          ekspor, dokumen yang sudah ditinjau petugas, dan riwayat konsultasi.
         </p>
         <Button
           variant="subtle"

@@ -11,7 +11,7 @@ import { PengajuanBridge } from "@/components/shared/PengajuanBridge";
 export const metadata: Metadata = {
   title: "Dashboard",
   description:
-    "Pantau level kesiapan ekspor, rekomendasi tervalidasi petugas, dan dokumen usaha Anda.",
+    "Kelola pengajuan ekspor, dokumen usaha, dan konsultasi dengan petugas Bea dan Cukai.",
 };
 
 export default function DashboardLayout({

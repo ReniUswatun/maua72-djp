@@ -10,18 +10,18 @@ const KOLOM = [
     judul: "Platform",
     tautan: [
       { href: "/#cara-kerja", label: "Cara Kerja" },
-      { href: "/#pilar", label: "8 Pilar Kesiapan" },
-      { href: "/asesmen", label: "Mulai Asesmen" },
+      { href: "/#untuk-siapa", label: "Untuk Siapa" },
+      { href: "/portal", label: "Tentang Platform" },
       { href: "/dashboard", label: "Dashboard" },
     ],
   },
   {
     judul: "Panduan",
     tautan: [
-      { href: "/panduan", label: "Semua Artikel" },
-      { href: "/panduan/memulai-ekspor-dari-nol", label: "Memulai dari Nol" },
-      { href: "/panduan/memahami-hs-code", label: "Memahami HS Code" },
+      { href: "/panduan", label: "Panduan Ekspor" },
+      { href: "/panduan#rangkuman", label: "Rangkuman AI" },
       { href: "/panduan#glosarium", label: "Glosarium Istilah" },
+      { href: "/daftar", label: "Daftar Gratis" },
     ],
   },
 ];
@@ -32,9 +32,9 @@ export function Footer() {
       <div className="container-page py-14">
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="lg:col-span-4">
-            <Logo subtitle="Kesiapan Ekspor UMKM" />
+            <Logo subtitle="Pendampingan Ekspor UMKM" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-gray-600">
-              Platform self-assessment kesiapan ekspor untuk UMKM Indonesia,
+              Pendampingan penyusunan dokumen ekspor untuk UMKM Indonesia,
               dikembangkan bersama {KANTOR.nama}.
             </p>
           </div>

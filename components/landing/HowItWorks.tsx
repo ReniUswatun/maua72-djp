@@ -3,33 +3,33 @@ import { STATISTIK_LANDING } from "@/lib/mock-data";
 const LANGKAH = [
   {
     no: "01",
-    judul: "Isi Asesmen Kesiapan",
+    judul: "Lengkapi Profil Usaha",
     detail:
-      "Sekitar 10 menit, 8 kategori pertanyaan. Setiap istilah teknis dijelaskan dengan bahasa sehari-hari.",
+      "Daftar gratis, isi data usaha, lalu unggah NIB dan NPWP. Ini fondasi yang dipakai petugas untuk memverifikasi pengajuan Anda.",
   },
   {
     no: "02",
-    judul: "Dapatkan Skor & Klasifikasi",
+    judul: "Buat Pengajuan Ekspor",
     detail:
-      "Skor 0–100 dan level kesiapan 1–5, lengkap dengan rincian nilai per pilar.",
+      "Isi produk, negara tujuan, pembeli, dan HS Code. Sistem menyiapkan checklist dokumen yang Anda butuhkan.",
   },
   {
     no: "03",
-    judul: "Lihat Rekomendasi Personal",
+    judul: "Susun & Unggah Dokumen",
     detail:
-      "Daftar langkah yang disusun berurutan sesuai kondisi usaha Anda, bukan daftar umum.",
+      "Commercial Invoice, Packing List, SKA, sampai PEB — tiap dokumen ada panduan cara membuatnya dengan bahasa awam.",
   },
   {
     no: "04",
-    judul: "Diskusikan dengan Petugas",
+    judul: "Petugas Bea Cukai Meninjau",
     detail:
-      "Rekomendasi ditinjau petugas Bea Cukai sebelum Anda tindak lanjuti. Anda melihat bila ada koreksi.",
+      "Petugas memeriksa tiap dokumen: menandai yang sudah sesuai atau meminta perbaikan, dengan catatan yang jelas.",
   },
   {
     no: "05",
-    judul: "Ikuti Roadmap sampai Ekspor Perdana",
+    judul: "Terima Keputusan & Kirim Barang",
     detail:
-      "Tandai langkah yang selesai, unggah dokumen, dan ulangi asesmen untuk melihat perkembangan.",
+      "Setelah semua dokumen sesuai, Anda menerima persetujuan dan bisa lanjut ke pengiriman pertama.",
   },
 ];
 

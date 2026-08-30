@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, BadgeCheck, PlayCircle, ShieldCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, CheckCircle2, Clock, PlayCircle, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { KANTOR } from "@/lib/mock-data";
@@ -31,19 +31,19 @@ export function Hero() {
           </span>
 
           <h1 className="mt-6 text-4xl font-bold leading-[1.1] tracking-tight text-primary-900 sm:text-5xl">
-            Siap Ekspor, Selangkah Lebih Dekat ke Pasar Global
+            Urus Dokumen Ekspor Pertama Anda, Ditemani Petugas
           </h1>
 
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-gray-600">
-            Cek kesiapan ekspor UMKM Anda dalam 10 menit. Dapatkan panduan
-            personal dari sistem yang divalidasi langsung oleh petugas Bea dan
-            Cukai Surakarta.
+            SiapEkspor menuntun UMKM menyusun setiap dokumen ekspor — dari NIB
+            sampai PEB — lalu mengirimkannya untuk ditinjau langsung oleh petugas
+            Bea dan Cukai Surakarta sebelum barang berangkat.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/daftar" className="sm:w-auto">
               <Button size="lg" full className="sm:w-auto">
-                Mulai Asesmen Gratis
+                Mulai Gratis
                 <ArrowRight className="h-5 w-5" aria-hidden />
               </Button>
             </Link>
@@ -55,16 +55,16 @@ export function Hero() {
               full
             >
               <PlayCircle className="h-5 w-5" aria-hidden />
-              Lihat Contoh Hasil
+              Lihat Contoh Dashboard
             </Button>
           </div>
 
           <ul className="mt-8 grid gap-2.5 text-sm text-gray-600 sm:grid-cols-2">
             {[
               "Gratis, tanpa biaya apa pun",
-              "8 pilar kesiapan, ±35 pertanyaan",
+              "Checklist dokumen sesuai produk Anda",
               "Bahasa awam, istilah dijelaskan",
-              "Rekomendasi ditinjau petugas",
+              "Setiap dokumen ditinjau petugas",
             ].map((t) => (
               <li key={t} className="flex items-center gap-2">
                 <BadgeCheck className="h-4 w-4 shrink-0 text-success" aria-hidden />
@@ -82,14 +82,20 @@ export function Hero() {
   );
 }
 
-/** Mockup ringan hasil asesmen — menggantikan foto stok. */
+/** Mockup ringan status pengajuan ekspor — menggantikan foto stok. */
 function HeroMockup() {
-  const pilar = [
-    { nama: "Legalitas Usaha", skor: 83 },
-    { nama: "Kesiapan Produk", skor: 58 },
-    { nama: "Klasifikasi & Regulasi", skor: 39 },
-    { nama: "Pengetahuan Kepabeanan", skor: 33 },
+  const dokumen = [
+    { nama: "NIB & NPWP", status: "ok" as const },
+    { nama: "Commercial Invoice", status: "ok" as const },
+    { nama: "Packing List", status: "review" as const },
+    { nama: "PEB / NPE", status: "belum" as const },
   ];
+
+  const badge = {
+    ok: { teks: "Diverifikasi", cls: "bg-green-100 text-green-700" },
+    review: { teks: "Ditinjau petugas", cls: "bg-sky-100 text-sky-700" },
+    belum: { teks: "Belum diunggah", cls: "bg-gray-100 text-gray-500" },
+  };
 
   return (
     <div className="relative mx-auto w-full max-w-lg">
@@ -97,43 +103,48 @@ function HeroMockup() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Skor Kesiapan
+              Pengajuan Ekspor
             </p>
-            <p className="mt-1 text-4xl font-bold text-primary-900">
-              57<span className="text-xl text-gray-400">/100</span>
+            <p className="mt-1 text-lg font-bold text-primary-900">
+              Kerajinan Rotan → Jerman
             </p>
           </div>
-          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700">
-            Level 3 · Sedang Berkembang
+          <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-bold text-sky-700">
+            Sedang direview
           </span>
         </div>
 
-        <div className="mt-6 space-y-3.5">
-          {pilar.map((p) => (
-            <div key={p.nama}>
-              <div className="mb-1.5 flex justify-between text-xs font-medium text-gray-600">
-                <span>{p.nama}</span>
-                <span className="tabular-nums text-gray-900">{p.skor}</span>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                <div
-                  className="h-full rounded-full bg-primary-600"
-                  style={{ width: `${p.skor}%` }}
-                />
-              </div>
+        <div className="mt-6 space-y-2.5">
+          {dokumen.map((d) => (
+            <div
+              key={d.nama}
+              className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2.5"
+            >
+              <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                {d.status === "ok" ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" aria-hidden />
+                ) : d.status === "review" ? (
+                  <Clock className="h-4 w-4 text-sky-600" aria-hidden />
+                ) : (
+                  <span className="h-4 w-4 rounded-full border-2 border-gray-300" aria-hidden />
+                )}
+                {d.nama}
+              </span>
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${badge[d.status].cls}`}>
+                {badge[d.status].teks}
+              </span>
             </div>
           ))}
-          <p className="pt-1 text-xs text-gray-400">+ 4 pilar lainnya</p>
         </div>
 
         <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-4">
           <p className="flex items-center gap-2 text-sm font-semibold text-green-800">
             <BadgeCheck className="h-4 w-4" aria-hidden />
-            Divalidasi Petugas Ahmad Fauzi
+            Catatan Petugas Ahmad Fauzi
           </p>
           <p className="mt-1 text-xs leading-relaxed text-green-700">
-            &ldquo;Prioritaskan pengurusan HS Code sebelum menerima pesanan
-            pertama dari buyer.&rdquo;
+            &ldquo;Packing List sudah sesuai. Lengkapi PEB lewat CEISA, lalu unggah
+            NPE-nya di sini.&rdquo;
           </p>
         </div>
       </div>

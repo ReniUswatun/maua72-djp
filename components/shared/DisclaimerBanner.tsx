@@ -4,9 +4,9 @@ import { Alert } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
 export const TEKS_DISCLAIMER =
-  "Platform ini adalah alat bantu edukasi dan asesmen mandiri. Rekomendasi yang diberikan sistem merupakan panduan awal yang harus divalidasi oleh Petugas Bea dan Cukai berwenang sebelum ditindaklanjuti. Keputusan resmi kepabeanan dan validitas dokumen ekspor sepenuhnya menjadi kewenangan Direktorat Jenderal Bea dan Cukai.";
+  "Platform ini adalah alat bantu edukasi dan pendampingan penyusunan dokumen ekspor. Panduan dan catatan yang diberikan sistem bersifat awal dan harus ditinjau oleh Petugas Bea dan Cukai berwenang sebelum ditindaklanjuti. Keputusan resmi kepabeanan dan validitas dokumen ekspor sepenuhnya menjadi kewenangan Direktorat Jenderal Bea dan Cukai.";
 
-/** Disclaimer wajib (blueprint §18) — footer, hasil asesmen, tiap rekomendasi. */
+/** Disclaimer wajib (blueprint §18) — footer dan tiap halaman panduan. */
 export function DisclaimerBanner({
   ringkas = false,
   className,

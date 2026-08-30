@@ -323,6 +323,7 @@ function BerkasLegalitas() {
             jenis={item.jenis}
             label={item.label}
             nomor={item.nomor}
+            namaUsaha={profile?.namaUsaha}
             file={item.file}
             onUpload={(url, nomorOcr) => simpanBerkasUsaha(item.jenis, url, nomorOcr)}
             onRemove={() => simpanBerkasUsaha(item.jenis, null)}
@@ -337,6 +338,7 @@ function BerkasSlot({
   jenis,
   label,
   nomor,
+  namaUsaha,
   file,
   onUpload,
   onRemove,
@@ -344,6 +346,7 @@ function BerkasSlot({
   jenis: "nib" | "npwp";
   label: string;
   nomor?: string;
+  namaUsaha?: string;
   file: string | null;
   onUpload: (url: string, nomorEkstrak?: string) => void;
   onRemove: () => void;
@@ -372,12 +375,16 @@ function BerkasSlot({
 
       let nomorEkstrak: string | undefined;
       const docId = jenis === "nib" ? "doc-nib" : "doc-npwp";
-      const ocr = await runOcr(docId, f, dataUrl);
-      
+      const ocr = await runOcr(docId, f, dataUrl, {
+        namaUsaha,
+        nomorNib: jenis === "nib" ? nomor : undefined,
+        nomorNpwp: jenis === "npwp" ? nomor : undefined,
+      });
+
       if (ocr.status !== "gagal_baca") {
-        const fieldName = jenis === "nib" ? "Nomor NIB (13 digit)" : "Nomor NPWP (15-16 digit)";
+        const fieldName = jenis === "nib" ? "Nomor NIB" : "Nomor NPWP";
         const match = ocr.temuan.find(t => t.field === fieldName);
-        if (match && match.sesuai && match.terbaca && match.terbaca !== "✓ Terdeteksi") {
+        if (match && match.terbaca && !match.terbaca.startsWith("✓") && !match.terbaca.startsWith("Tidak")) {
           nomorEkstrak = match.terbaca;
           if (jenis === "nib") {
             const digits = nomorEkstrak.match(/\d{13}/);

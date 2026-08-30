@@ -1,13 +1,12 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Loader2 } from "lucide-react";
 
 import { GLOSSARY_LIST } from "@/lib/glossary";
 import { usePanduanStore, usePublishedPanduan } from "@/store/panduan-store";
 import type { PanduanEntry } from "@/lib/types";
-import { AIPanduanSearch } from "./AIPanduanSearch";
+import { PanduanRangkuman } from "./PanduanRangkuman";
 
 function StepCard({
   entry,
@@ -52,11 +51,6 @@ export function PanduanReader({ embedded = false }: { embedded?: boolean }) {
   const entries = usePublishedPanduan();
   const basePath = embedded ? "/dashboard/panduan" : "/panduan/langkah";
 
-  const [searchResults, setSearchResults] = React.useState<PanduanEntry[] | null>(null);
-  const [aiMessage, setAiMessage] = React.useState<string | null>(null);
-
-  const displayedEntries = searchResults ?? entries;
-
   if (!hydrated) {
     return (
       <div className={embedded ? "flex min-h-[40vh] items-center justify-center" : "container-page py-24"}>
@@ -73,7 +67,7 @@ export function PanduanReader({ embedded = false }: { embedded?: boolean }) {
       <p className="eyebrow">Panduan Ekspor</p>
       <h1 className="mt-2 text-3xl font-bold tracking-tight">Panduan ekspor, langkah demi langkah</h1>
       <p className="mt-2 max-w-2xl leading-relaxed text-gray-600">
-        Ikuti dari langkah pertama. Klik satu langkah untuk penjelasan lengkap beserta contohnya.
+        Mulai dari rangkuman di bawah untuk gambaran menyeluruh, lalu buka langkah yang sedang Anda butuhkan.
       </p>
     </div>
   ) : (
@@ -84,43 +78,27 @@ export function PanduanReader({ embedded = false }: { embedded?: boolean }) {
           Panduan ekspor, langkah demi langkah
         </h1>
         <p className="mt-4 max-w-2xl text-lg leading-relaxed text-gray-600">
-          Ikuti dari langkah pertama. Klik satu langkah untuk penjelasan lengkap beserta contohnya.
+          Mulai dari rangkuman di bawah untuk gambaran menyeluruh, lalu buka langkah yang sedang Anda butuhkan.
         </p>
       </div>
     </section>
   );
 
   const Body = (
-    <div className={embedded ? "mt-8 space-y-6" : "container-page py-14 sm:py-16"}>
-      <AIPanduanSearch 
-        entries={entries} 
-        onResult={(res, msg) => {
-          setSearchResults(res);
-          setAiMessage(msg);
-        }} 
-      />
+    <div className={embedded ? "mt-8 space-y-8" : "container-page space-y-10 py-14 sm:py-16"}>
+      <PanduanRangkuman entries={entries} basePath={basePath} />
 
-      {aiMessage && (
-        <div className="mb-4 rounded-lg bg-indigo-50 px-4 py-3 text-sm font-medium text-indigo-900 ring-1 ring-inset ring-indigo-200">
-          {aiMessage}
-        </div>
-      )}
+      <section>
+        <h2 className="text-2xl font-bold tracking-tight">Semua langkah panduan</h2>
+        <p className="mt-1 text-sm text-gray-600">Urut dari awal. Klik satu langkah untuk penjelasan lengkap beserta contohnya.</p>
+        <ol className="mt-5 space-y-3">
+          {entries.map((entry, i) => (
+            <StepCard key={entry.id} entry={entry} nomor={i + 1} basePath={basePath} />
+          ))}
+        </ol>
+      </section>
 
-      <ol className="space-y-3">
-        {displayedEntries.map((entry, i) => (
-          <StepCard 
-            key={entry.id} 
-            entry={entry} 
-            // When filtering, we might want to show the original number, but since it's just steps, 
-            // for search results we can just show the index in the results or omit the number.
-            // Let's just pass the index + 1 for now.
-            nomor={i + 1} 
-            basePath={basePath} 
-          />
-        ))}
-      </ol>
-
-      <section id="glosarium" className="mt-12 scroll-mt-24">
+      <section id="glosarium" className="scroll-mt-24">
         <div className="flex items-center gap-3">
           <BookOpen className="h-6 w-6 text-primary-600" aria-hidden />
           <h2 className="text-2xl font-bold tracking-tight">Glosarium istilah</h2>
