@@ -20,9 +20,11 @@ import { Textarea, Label } from "@/components/ui/input";
 import { DocumentReviewList } from "@/components/admin/DocumentReviewList";
 import { WhatsAppDraftPanel } from "@/components/admin/WhatsAppDraftPanel";
 import { DATA_USAHA_LABEL, STATUS_LABEL } from "@/lib/admin-data";
+import { stageToPengajuanStatus } from "@/lib/pengajuan-bridge";
 import { slaInfo, slaTone } from "@/lib/sla";
 import { formatTanggal, formatTanggalPendek } from "@/lib/utils";
 import { useAdminStore, useCan } from "@/store/admin-store";
+import { useAppStore } from "@/store/assessment-store";
 import type { ApplicationCase, BusinessApprovalStatus, ReviewStage } from "@/lib/types";
 
 function statusTone(status: ReviewStage) {
@@ -100,7 +102,14 @@ export function AdminReviewWorkspace({ caseItem }: { caseItem: ApplicationCase }
     if (decision === "ditolak" && !window.confirm(`Tolak pengajuan ${caseItem.businessName}?`)) {
       return;
     }
-    setCaseDecision(caseItem.id, decision, finalReason || message);
+    const alasan = finalReason || message;
+    setCaseDecision(caseItem.id, decision, alasan);
+    useAppStore.getState().terapkanReviewAdmin(caseItem.id, {
+      status: stageToPengajuanStatus(decision),
+      catatanReview: decision === "disetujui" ? undefined : alasan,
+      timelineJudul: `Keputusan admin: ${STATUS_LABEL[decision]}`,
+      timelineDetail: alasan,
+    });
     setFeedbackTone("success");
     setStatusMessage(message);
   };
@@ -304,6 +313,11 @@ export function AdminReviewWorkspace({ caseItem }: { caseItem: ApplicationCase }
                 disabled={!canDecide}
                 onClick={() => {
                   submitReview(caseItem.id);
+                  useAppStore.getState().terapkanReviewAdmin(caseItem.id, {
+                    status: "review",
+                    timelineJudul: "Pengajuan mulai direview admin",
+                    timelineDetail: "Admin membuka dan mulai meninjau pengajuan.",
+                  });
                   setFeedbackTone("success");
                   setStatusMessage("Pengajuan ditandai sedang direview.");
                 }}

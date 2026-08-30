@@ -6,7 +6,19 @@
  * lalu buka bagian dokumen yang sedang dibutuhkan.
  * ------------------------------------------------------------------ */
 
-import type { PanduanEntry } from "./types";
+import type { PanduanBlok, PanduanEntry } from "./types";
+
+/** Ubah judul jadi slug URL. */
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 60)
+    .replace(/-+$/g, "");
+}
 
 export interface AlurTahap {
   nomor: number;
@@ -201,35 +213,53 @@ export function getDokumenPanduan(id: string) {
  * kondisi awal, dan sebagai fallback bila store belum terisi.
  * ------------------------------------------------------------------ */
 
+/**
+ * Kondisi awal CMS: satu daftar langkah berurutan. Tiap langkah adalah
+ * artikel dengan blok konten dan halaman detail sendiri.
+ * Disusun dari `ALUR_EKSPOR` (alur) + `DOKUMEN_PANDUAN` (tiap dokumen).
+ */
 export const SEED_PANDUAN: PanduanEntry[] = [
-  ...ALUR_EKSPOR.map((tahap, index): PanduanEntry => ({
-    id: `tahap-${tahap.nomor}`,
-    tipe: "tahap",
-    judul: tahap.judul,
-    ringkas: tahap.ringkas,
-    deskripsi: "",
-    poin: tahap.rincian,
-    langkah: [],
-    tautan: [],
-    dibuatSendiri: false,
-    urutan: (index + 1) * 10,
-    status: "terbit",
-    terkunci: true,
-  })),
-  ...DOKUMEN_PANDUAN.map((dok, index): PanduanEntry => ({
-    id: dok.id,
-    tipe: "dokumen",
-    judul: dok.nama,
-    ringkas: dok.singkat,
-    deskripsi: dok.deskripsi,
-    poin: [],
-    langkah: dok.caraDapat,
-    tautan: dok.tautan ?? [],
-    dibuatSendiri: dok.dibuatSendiri,
-    urutan: 100 + index * 10,
-    status: "terbit",
-    terkunci: true,
-  })),
+  ...ALUR_EKSPOR.map((tahap, index): PanduanEntry => {
+    const blok: PanduanBlok[] = [
+      { tipe: "paragraf", teks: tahap.ringkas },
+      { tipe: "poin", items: tahap.rincian },
+    ];
+    return {
+      id: `tahap-${tahap.nomor}`,
+      slug: slugify(tahap.judul),
+      judul: tahap.judul,
+      ringkas: tahap.ringkas,
+      blok,
+      urutan: (index + 1) * 10,
+      status: "terbit",
+      terkunci: true,
+    };
+  }),
+  ...DOKUMEN_PANDUAN.map((dok, index): PanduanEntry => {
+    const blok: PanduanBlok[] = [
+      { tipe: "paragraf", teks: dok.deskripsi },
+      {
+        tipe: "catatan",
+        teks: dok.dibuatSendiri
+          ? "Dokumen ini Anda buat sendiri sebagai eksportir."
+          : "Dokumen ini diurus/diterbitkan oleh instansi terkait.",
+      },
+      { tipe: "langkah", items: dok.caraDapat },
+      ...(dok.tautan && dok.tautan.length
+        ? [{ tipe: "tautan" as const, items: dok.tautan }]
+        : []),
+    ];
+    return {
+      id: dok.id,
+      slug: slugify(dok.nama),
+      judul: dok.nama,
+      ringkas: dok.singkat,
+      blok,
+      urutan: 100 + index * 10,
+      status: "terbit",
+      terkunci: true,
+    };
+  }),
 ];
 
 export const KATEGORI_KONSULTASI = [

@@ -81,9 +81,9 @@ function ocr(
   };
 }
 
-function pdf(judul: string, baris: string[]): string {
+function pdf(judul: string, baris: string[], subjudul?: string): string {
   try {
-    return buildSamplePdf(judul, baris);
+    return buildSamplePdf(judul, baris, subjudul);
   } catch {
     return "";
   }
@@ -189,31 +189,173 @@ function dokumenKopiMerapi(): DocumentItem[] {
   ];
 }
 
-function dokumenSederhana(prefix: string, uploaded: number): DocumentItem[] {
-  const base: Omit<DocumentItem, "status">[] = [
-    { id: "doc-nib", nama: "Nomor Induk Berusaha (NIB)", keterangan: "Diterbitkan lewat OSS.", wajib: true },
-    { id: "doc-invoice", nama: "Commercial Invoice", keterangan: "Faktur komersial.", wajib: true },
-    { id: "doc-packing", nama: "Packing List", keterangan: "Rincian kemasan.", wajib: true },
-    { id: "doc-peb", nama: "Pemberitahuan Ekspor Barang (PEB)", keterangan: "Dokumen pabean.", wajib: true },
-  ];
+interface DocSeed {
+  id: string;
+  nama: string;
+  keterangan: string;
+  wajib: boolean;
+  subjudul: string;
+  isi: string[];
+  ocr: DocumentOcrResult;
+}
 
-  return base.map((doc, index) => {
+function docSeedDefault(prefix: string): DocSeed[] {
+  return [
+    {
+      id: "doc-nib",
+      nama: "Nomor Induk Berusaha (NIB)",
+      keterangan: "Diterbitkan lewat OSS. Wajib untuk semua kegiatan ekspor.",
+      wajib: true,
+      subjudul: "Online Single Submission (OSS)",
+      isi: [
+        `Nama Usaha   : ${prefix} Nusantara`,
+        "Nomor NIB    : 0812250034567",
+        "KBLI         : 10791 - Industri produk olahan",
+        "Status       : Aktif",
+        "Akses Kepabeanan : Aktif (ekspor-impor)",
+      ],
+      ocr: ocr("Contoh NIB OSS", "cocok", "Nomor NIB, nama usaha, dan status akses kepabeanan terbaca dan sesuai.", [
+        { field: "Nama usaha", terbaca: `${prefix} Nusantara`, diharapkan: "Sesuai data usaha", sesuai: true },
+        { field: "Nomor NIB", terbaca: "0812250034567", diharapkan: "13 digit", sesuai: true },
+        { field: "Status", terbaca: "Aktif", diharapkan: "Aktif", sesuai: true },
+        { field: "Akses kepabeanan", terbaca: "Aktif", diharapkan: "Aktif", sesuai: true },
+      ]),
+    },
+    {
+      id: "doc-invoice",
+      nama: "Commercial Invoice",
+      keterangan: "Faktur komersial ke pembeli luar negeri.",
+      wajib: true,
+      subjudul: "Faktur komersial ekspor",
+      isi: [
+        "Invoice No : INV-2026-055",
+        `Exporter   : ${prefix} Nusantara`,
+        "Consignee  : Overseas Buyer Pte Ltd",
+        "Description : Produk olahan (retail pack)",
+        "Quantity   : 800 pcs",
+        "Unit Price : USD 12.00",
+        "Total      : USD 9.600",
+        "Incoterm   : FOB Tanjung Emas",
+      ],
+      ocr: ocr("Template Commercial Invoice ekspor", "cocok", "Semua kolom inti invoice terbaca dan konsisten dengan pengajuan.", [
+        { field: "Nomor invoice", terbaca: "INV-2026-055", diharapkan: "Ada nomor invoice", sesuai: true },
+        { field: "Nama eksportir", terbaca: `${prefix} Nusantara`, diharapkan: "Sesuai data usaha", sesuai: true },
+        { field: "Consignee", terbaca: "Overseas Buyer Pte Ltd", diharapkan: "Nama pembeli", sesuai: true },
+        { field: "Nilai total", terbaca: "USD 9.600", diharapkan: "Sesuai nilai pengajuan", sesuai: true },
+        { field: "Incoterm", terbaca: "FOB Tanjung Emas", diharapkan: "Incoterm + pelabuhan", sesuai: true },
+      ]),
+    },
+    {
+      id: "doc-packing",
+      nama: "Packing List",
+      keterangan: "Rincian isi setiap kemasan.",
+      wajib: true,
+      subjudul: "Rincian kemasan",
+      isi: [
+        "Ref Invoice : INV-2026-055",
+        "Total Carton: 40",
+        "Net Weight  : 320 kg",
+        "Gross Weight: 358 kg",
+        "Dimension   : 40 x (40 x 30 x 25) cm",
+      ],
+      ocr: ocr("Template Packing List ekspor", "cocok", "Jumlah karton, berat bersih & kotor terbaca dan konsisten dengan invoice.", [
+        { field: "Nomor invoice terkait", terbaca: "INV-2026-055", diharapkan: "Sama dengan invoice", sesuai: true },
+        { field: "Jumlah karton", terbaca: "40", diharapkan: "Angka jumlah karton", sesuai: true },
+        { field: "Berat bersih", terbaca: "320 kg", diharapkan: "Angka + satuan", sesuai: true },
+      ]),
+    },
+    {
+      id: "doc-peb",
+      nama: "Pemberitahuan Ekspor Barang (PEB)",
+      keterangan: "Diajukan lewat CEISA sebelum barang dimuat.",
+      wajib: true,
+      subjudul: "Dokumen pabean (CEISA 4.0)",
+      isi: [
+        "Nomor Pendaftaran : 000123-2026",
+        `Eksportir : ${prefix} Nusantara`,
+        "HS Code   : 2008.99.90",
+        "Nilai FOB : USD 9.600",
+        "Pelabuhan Muat : Tanjung Emas",
+        "NPE : Terbit",
+      ],
+      ocr: ocr("Template PEB / NPE", "cocok", "Nomor pendaftaran, HS Code, dan nilai FOB terbaca serta cocok dengan invoice.", [
+        { field: "Nomor pendaftaran", terbaca: "000123-2026", diharapkan: "Ada nomor pendaftaran", sesuai: true },
+        { field: "HS Code", terbaca: "2008.99.90", diharapkan: "Sesuai pengajuan", sesuai: true },
+        { field: "Nilai FOB", terbaca: "USD 9.600", diharapkan: "Sama dengan invoice", sesuai: true },
+      ]),
+    },
+  ];
+}
+
+function seedToDocs(seeds: DocSeed[], prefix: string, uploaded: number): DocumentItem[] {
+  return seeds.map((seed, index) => {
+    const { subjudul, isi, ocr: ocrResult, ...doc } = seed;
     if (index >= uploaded) return { ...doc, status: "belum" as const };
     return {
       ...doc,
       status: "diunggah" as const,
       namaFile: `${prefix}-${doc.id}.pdf`,
       tanggal: "2026-08-27",
-      fileUrl: pdf(doc.nama.toUpperCase(), [`Berkas contoh untuk ${doc.nama}`, `Pengajuan: ${prefix}`]),
-      ocr:
-        doc.id === "doc-invoice"
-          ? ocr("Template Commercial Invoice ekspor", "cocok", "Data invoice sesuai template.", [
-              { field: "Nama eksportir", terbaca: "sesuai", diharapkan: "sesuai", sesuai: true },
-              { field: "Nilai total", terbaca: "sesuai", diharapkan: "sesuai", sesuai: true },
-            ])
-          : undefined,
+      fileUrl: pdf(doc.nama.toUpperCase(), isi, subjudul),
+      ocr: ocrResult,
     };
   });
+}
+
+function dokumenSederhana(prefix: string, uploaded: number): DocumentItem[] {
+  return seedToDocs(docSeedDefault(prefix), prefix, uploaded);
+}
+
+/** Untuk case pangan/herbal: tambah sertifikat halal + izin edar BPOM (contoh OCR sertifikat). */
+function dokumenDenganSertifikat(prefix: string): DocumentItem[] {
+  const halal: DocSeed = {
+    id: "doc-halal",
+    nama: "Sertifikat Halal (BPJPH)",
+    keterangan: "Sertifikat halal produk dari BPJPH.",
+    wajib: false,
+    subjudul: "Badan Penyelenggara Jaminan Produk Halal",
+    isi: [
+      "Nomor Sertifikat : ID00110000123450820",
+      `Nama Pelaku Usaha : ${prefix} Nusantara`,
+      "Nama Produk : Keripik Buah Aneka Rasa",
+      "Terbit : 12 Februari 2024",
+      "Berlaku s.d. : 11 Februari 2025",
+    ],
+    ocr: ocr("Contoh Sertifikat Halal BPJPH", "perlu_perbaikan", "Masa berlaku sertifikat halal sudah lewat (11 Feb 2025). Perlu diperbarui sebelum ekspor.", [
+      { field: "Nomor sertifikat", terbaca: "ID00110000123450820", diharapkan: "Format nomor BPJPH", sesuai: true },
+      { field: "Nama pelaku usaha", terbaca: `${prefix} Nusantara`, diharapkan: "Sesuai data usaha", sesuai: true },
+      {
+        field: "Masa berlaku",
+        terbaca: "11 Februari 2025",
+        diharapkan: "Masih berlaku saat ekspor",
+        sesuai: false,
+        catatan: "Sertifikat sudah kedaluwarsa. Ajukan perpanjangan ke BPJPH.",
+      },
+    ]),
+  };
+  const izin: DocSeed = {
+    id: "doc-izin-edar",
+    nama: "Izin Edar / PIRT / BPOM",
+    keterangan: "Bukti produk legal beredar di negara asal.",
+    wajib: true,
+    subjudul: "Izin edar pangan olahan",
+    isi: [
+      "Jenis Izin : PIRT",
+      "Nomor : P-IRT 2153374010123-24",
+      `Nama Usaha : ${prefix} Nusantara`,
+      "Produk : Keripik Buah",
+      "Berlaku s.d. : 20 September 2026",
+    ],
+    ocr: ocr("Contoh Izin Edar Pangan", "perlu_perbaikan", "Terbaca sebagai PIRT. Untuk tujuan ekspor umumnya perlu naik ke izin edar BPOM MD.", [
+      { field: "Jenis izin", terbaca: "PIRT", diharapkan: "BPOM MD untuk ekspor", sesuai: false, catatan: "PIRT hanya untuk skala rumah tangga. Ajukan izin edar BPOM MD." },
+      { field: "Nomor izin", terbaca: "P-IRT 2153374010123-24", diharapkan: "Format nomor izin edar", sesuai: true },
+      { field: "Masa berlaku", terbaca: "20 September 2026", diharapkan: "Masih berlaku", sesuai: true },
+    ]),
+  };
+  return [
+    ...seedToDocs(docSeedDefault(prefix), prefix, 4),
+    ...seedToDocs([izin, halal], prefix, 2),
+  ];
 }
 
 /* ---------- Daftar pengajuan ---------- */
@@ -438,7 +580,7 @@ export const ADMIN_CASES: ApplicationCase[] = [
     hsCode: "2106.90.99",
     nilaiEkspor: "8000",
     submittedAt: "2026-08-29T01:05:00.000Z",
-    documents: dokumenSederhana("Herbal", 3),
+    documents: dokumenDenganSertifikat("Herbal"),
     timeline: [
       {
         id: "tl-herbal-1",

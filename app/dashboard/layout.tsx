@@ -6,6 +6,7 @@ import {
   Sidebar,
 } from "@/components/dashboard/Sidebar";
 import { ButuhLogin } from "@/components/shared/Gate";
+import { PengajuanBridge } from "@/components/shared/PengajuanBridge";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -20,6 +21,7 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="flex min-h-screen bg-gray-50">
+      <PengajuanBridge />
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <DashboardTopbar />

@@ -13,10 +13,13 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Label, Textarea } from "@/components/ui/input";
 import { openFileInNewTab, useViewableUrl } from "@/lib/file-url";
+import { roleLabel } from "@/lib/rbac";
 import { cn, formatTanggalPendek } from "@/lib/utils";
 import { useAdminStore, useCan } from "@/store/admin-store";
-import type { ApplicationCase, DocStatus, DocumentItem } from "@/lib/types";
+import { useAppStore } from "@/store/assessment-store";
+import type { AdminRole, ApplicationCase, DocStatus, DocumentItem } from "@/lib/types";
 
 const DOC_STATUS_LABEL: Record<DocStatus, string> = {
   belum: "Belum diunggah",
@@ -199,11 +202,38 @@ function DocumentRow({
   onView: (doc: DocumentItem) => void;
 }) {
   const [open, setOpen] = React.useState(false);
+  const [revisiOpen, setRevisiOpen] = React.useState(false);
+  const [revisiText, setRevisiText] = React.useState(doc.catatanPetugas ?? "");
   const canReview = useCan("case.review");
   const updateDocStatus = useAdminStore((s) => s.setDocStatus);
+  const session = useAdminStore((s) => s.session);
 
   const hasFile = Boolean(doc.namaFile);
   const needsAttention = doc.ocr && doc.ocr.status !== "cocok";
+
+  const namaAdmin = session?.nama ?? "Admin";
+  const peranAdmin = roleLabel((session?.role ?? "admin") as AdminRole);
+
+  const tandaiVerifikasi = () => {
+    updateDocStatus(caseId, doc.id, "diverifikasi");
+    useAppStore.getState().terapkanReviewAdmin(caseId, {
+      doc: { id: doc.id, status: "diverifikasi", oleh: namaAdmin, peran: peranAdmin },
+      timelineJudul: `Dokumen "${doc.nama}" diverifikasi`,
+      timelineDetail: `Diverifikasi oleh ${namaAdmin}.`,
+    });
+  };
+
+  const kirimRevisi = () => {
+    const catatan = revisiText.trim();
+    if (!catatan) return;
+    updateDocStatus(caseId, doc.id, "revisi", catatan);
+    useAppStore.getState().terapkanReviewAdmin(caseId, {
+      doc: { id: doc.id, status: "revisi", catatan, oleh: namaAdmin, peran: peranAdmin },
+      timelineJudul: `Revisi diminta untuk "${doc.nama}"`,
+      timelineDetail: catatan,
+    });
+    setRevisiOpen(false);
+  };
 
   return (
     <li className="overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -268,19 +298,15 @@ function DocumentRow({
             </Button>
             {canReview && hasFile ? (
               <>
-                <Button
-                  size="sm"
-                  variant="subtle"
-                  onClick={() => updateDocStatus(caseId, doc.id, "diverifikasi")}
-                >
+                <Button size="sm" variant="subtle" onClick={tandaiVerifikasi}>
                   Tandai diverifikasi
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    const catatan = window.prompt("Catatan revisi untuk UMKM:", doc.catatanPetugas ?? "");
-                    if (catatan !== null) updateDocStatus(caseId, doc.id, "revisi", catatan || undefined);
+                    setRevisiText(doc.catatanPetugas ?? "");
+                    setRevisiOpen((v) => !v);
                   }}
                 >
                   Minta revisi
@@ -289,11 +315,41 @@ function DocumentRow({
             ) : null}
           </div>
 
+          {revisiOpen ? (
+            <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+              <Label htmlFor={`revisi-${doc.id}`}>Catatan revisi untuk UMKM</Label>
+              <Textarea
+                id={`revisi-${doc.id}`}
+                value={revisiText}
+                onChange={(e) => setRevisiText(e.target.value)}
+                className="min-h-[5rem] bg-white"
+                placeholder="Jelaskan apa yang perlu diperbaiki UMKM pada dokumen ini."
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="danger" disabled={!revisiText.trim()} onClick={kirimRevisi}>
+                  Kirim permintaan revisi
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setRevisiOpen(false)}>
+                  Batal
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
           {doc.catatanPetugas ? (
-            <p className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
-              <span className="font-semibold">Catatan petugas: </span>
-              {doc.catatanPetugas}
-            </p>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+              <p>
+                <span className="font-semibold">Catatan petugas: </span>
+                {doc.catatanPetugas}
+              </p>
+              {doc.catatanPetugasOleh ? (
+                <p className="mt-1 text-xs text-gray-500">
+                  oleh {doc.catatanPetugasOleh}
+                  {doc.catatanPetugasPeran ? ` — ${doc.catatanPetugasPeran}` : ""}
+                  {doc.catatanPetugasPada ? ` · ${formatTanggalPendek(doc.catatanPetugasPada)}` : ""}
+                </p>
+              ) : null}
+            </div>
           ) : null}
 
           <OcrPanel doc={doc} />

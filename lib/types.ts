@@ -128,6 +128,18 @@ export interface AuditLogEntry {
   note?: string;
 }
 
+/** Catatan aktivitas admin lintas modul (mis. edit panduan), dipantau super admin. */
+export interface ActivityEntry {
+  id: string;
+  timestamp: string;
+  /** Nama admin pelaku. */
+  admin: string;
+  /** Modul: "panduan" | "akun" | "pengajuan" | ... */
+  kategori: string;
+  action: string;
+  detail?: string;
+}
+
 /**
  * Satu pengajuan ekspor UMKM yang masuk ke meja officer.
  * Modelnya berpusat pada dokumen yang diunggah UMKM, bukan skor asesmen.
@@ -175,6 +187,10 @@ export interface DocumentItem {
   fileUrl?: string;
   tanggal?: string;
   catatanPetugas?: string;
+  /** Siapa yang meminta revisi / memberi catatan (nama, peran, tanggal ISO). */
+  catatanPetugasOleh?: string;
+  catatanPetugasPeran?: string;
+  catatanPetugasPada?: string;
   /** Hasil pembacaan OCR + pencocokan terhadap template contoh. */
   ocr?: DocumentOcrResult;
 }
@@ -242,11 +258,11 @@ export interface GlossaryEntry {
 }
 
 /* ---------- Panduan CMS ---------- *
- * Konten panduan yang dikelola admin lewat CMS sederhana.
- * Satu daftar rata; `tipe` membedakan tahap alur dan panduan dokumen.
+ * Panduan ekspor = satu daftar langkah berurutan. Tiap langkah adalah
+ * "artikel" yang dikelola admin lewat editor blok (mirip CMS berita) dan
+ * punya halaman detail sendiri.
  */
 
-export type PanduanTipe = "tahap" | "dokumen";
 export type PanduanStatus = "terbit" | "draf";
 
 export interface PanduanLangkah {
@@ -259,24 +275,33 @@ export interface PanduanTautan {
   url: string;
 }
 
+/** Blok konten dalam satu artikel panduan. */
+export type PanduanBlok =
+  | { tipe: "paragraf"; teks: string }
+  | { tipe: "poin"; items: string[] }
+  | { tipe: "langkah"; items: PanduanLangkah[] }
+  | { tipe: "gambar"; dataUrl: string; keterangan?: string }
+  | { tipe: "catatan"; teks: string }
+  | { tipe: "tautan"; items: PanduanTautan[] };
+
+export type PanduanBlokTipe = PanduanBlok["tipe"];
+
 export interface PanduanEntry {
   id: string;
-  tipe: PanduanTipe;
+  /** Dipakai di URL halaman detail. */
+  slug: string;
   judul: string;
-  /** Subjudul / inti singkat. */
+  /** Subjudul / inti singkat, tampil di kartu daftar. */
   ringkas: string;
-  /** Paragraf penjelasan (terutama untuk dokumen). */
-  deskripsi: string;
-  /** Poin ringkas berupa daftar (dipakai tahap alur). */
-  poin: string[];
-  /** Langkah bernomor (dipakai panduan dokumen). */
-  langkah: PanduanLangkah[];
-  tautan: PanduanTautan[];
-  /** Untuk dokumen: dibuat sendiri oleh eksportir vs diurus ke instansi. */
-  dibuatSendiri: boolean;
+  /** Gambar sampul (data URL), opsional. */
+  gambarSampul?: string;
+  /** Isi artikel. */
+  blok: PanduanBlok[];
   /** Urutan tampil (kecil = atas). */
   urutan: number;
   status: PanduanStatus;
   /** Entri inti bawaan — boleh disunting, tidak boleh dihapus. */
   terkunci: boolean;
+  diperbaruiPada?: string;
+  diperbaruiOleh?: string;
 }

@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { openFileInNewTab } from "@/lib/file-url";
 import { runOcr } from "@/lib/ocr-engine";
+import { formatTanggalPendek } from "@/lib/utils";
 import type { DocumentItem, DocumentOcrResult } from "@/lib/types";
 
 interface Props {
@@ -100,6 +101,13 @@ export function DocumentUploadItem({ doc, bolehEdit, onUpload }: Props) {
             <Alert tone="warning" className="mt-3 py-2">
               <p className="text-sm font-medium">Catatan petugas:</p>
               <p className="text-sm">{doc.catatanPetugas}</p>
+              {doc.catatanPetugasOleh ? (
+                <p className="mt-1 text-xs text-amber-700/80">
+                  Diminta oleh {doc.catatanPetugasOleh}
+                  {doc.catatanPetugasPeran ? ` — ${doc.catatanPetugasPeran}` : ""}
+                  {doc.catatanPetugasPada ? ` · ${formatTanggalPendek(doc.catatanPetugasPada)}` : ""}
+                </p>
+              ) : null}
             </Alert>
           )}
         </div>

@@ -5,7 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatTanggal, formatTanggalPendek } from "@/lib/utils";
 import { useAdminStore } from "@/store/admin-store";
 
-const KIND_LABEL: Record<string, string> = { account: "Akun", audit: "Audit" };
+const KIND_LABEL: Record<string, string> = {
+  account: "Akun",
+  audit: "Pengajuan",
+  panduan: "Panduan",
+  aktivitas: "Aktivitas",
+};
 
 type FeedEntry = {
   id: string;
@@ -19,6 +24,7 @@ type FeedEntry = {
 export default function SuperAdminActivityPage() {
   const accounts = useAdminStore((s) => s.accounts);
   const cases = useAdminStore((s) => s.cases);
+  const activityLog = useAdminStore((s) => s.activityLog);
 
   const feed: FeedEntry[] = [
     ...accounts.map((account) => ({
@@ -28,6 +34,14 @@ export default function SuperAdminActivityPage() {
       detail: `${account.nama} · ${account.email} · reset ${account.passwordResetAt ?? "-"}`,
       actor: account.role,
       date: account.lastLoginAt ?? account.passwordResetAt ?? new Date().toISOString(),
+    })),
+    ...activityLog.map((entry) => ({
+      id: entry.id,
+      kind: entry.kategori,
+      title: entry.action,
+      detail: entry.detail ?? "",
+      actor: entry.admin,
+      date: entry.timestamp,
     })),
     ...cases.flatMap((item) =>
       item.auditTrail.map((entry) => ({

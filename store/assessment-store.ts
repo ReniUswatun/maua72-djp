@@ -48,6 +48,22 @@ const DEFAULT_DOCUMENTS: DocumentItem[] = [
   },
 ];
 
+export interface ReviewAdminPatch {
+  /** Perubahan status satu dokumen (mis. minta revisi). */
+  doc?: {
+    id: string;
+    status: DocumentItem["status"];
+    catatan?: string;
+    oleh?: string;
+    peran?: string;
+  };
+  /** Status baru pengajuan (dari keputusan admin). */
+  status?: PengajuanEkspor["status"];
+  catatanReview?: string;
+  timelineJudul?: string;
+  timelineDetail?: string;
+}
+
 interface AppState {
   /* ---- data ---- */
   user: User | null;
@@ -70,6 +86,8 @@ interface AppState {
   unggahDokumenPengajuan: (pengajuanId: string, docId: string, namaFile: string, fileUrl?: string, ocr?: DocumentOcrResult) => void;
   kirimPengajuan: (pengajuanId: string) => void;
   tarikPengajuan: (pengajuanId: string) => void;
+  /** Terapkan hasil review admin ke pengajuan UMKM yang sama (jembatan store). */
+  terapkanReviewAdmin: (pengajuanId: string, patch: ReviewAdminPatch) => void;
 
   // Konsultasi (ticketing)
   buatTiket: (judul: string, kategori: string, pesan: string) => string;
@@ -266,6 +284,48 @@ export const useAppStore = create<AppState>()(
           }),
         })),
 
+      terapkanReviewAdmin: (pengajuanId, patch) =>
+        set((s) => {
+          const target = s.pengajuan.find((p) => p.id === pengajuanId);
+          if (!target) return s;
+          const nowIso = new Date().toISOString();
+
+          const pengajuan = s.pengajuan.map((p) => {
+            if (p.id !== pengajuanId) return p;
+            let next = { ...p };
+            if (patch.doc) {
+              next = {
+                ...next,
+                dokumen: next.dokumen.map((d) =>
+                  d.id === patch.doc!.id
+                    ? {
+                        ...d,
+                        status: patch.doc!.status,
+                        catatanPetugas: patch.doc!.catatan ?? d.catatanPetugas,
+                        catatanPetugasOleh: patch.doc!.oleh,
+                        catatanPetugasPeran: patch.doc!.peran,
+                        catatanPetugasPada: nowIso,
+                      }
+                    : d,
+                ),
+              };
+            }
+            if (patch.status) next = { ...next, status: patch.status };
+            if (patch.catatanReview !== undefined) next = { ...next, catatanReview: patch.catatanReview };
+            return next;
+          });
+
+          return {
+            pengajuan,
+            timeline: catat(s.timeline, {
+              kind: "officer",
+              judul: patch.timelineJudul ?? `Admin memperbarui pengajuan ${pengajuanId}`,
+              detail: patch.timelineDetail ?? patch.catatanReview ?? "Ada pembaruan dari admin.",
+              aktor: patch.doc?.oleh ?? "Admin",
+            }),
+          };
+        }),
+
       buatTiket: (judul, kategori, pesan) => {
         const id = newId("TK");
         const now = new Date().toISOString();
@@ -348,6 +408,17 @@ export const useAppStore = create<AppState>()(
         })),
 
       muatDemo: () => {
+        // Idempoten: kalau sudah ada data (mis. hasil review admin sudah masuk),
+        // cukup pastikan sesi UMKM demo aktif tanpa menimpa apa pun.
+        if (get().pengajuan.length > 0 || get().modeDemo) {
+          set((s) => ({
+            user: s.user ?? DEMO_USER,
+            profile: s.profile ?? { ...DEMO_PROFILE, nomorNib: "1234567890123", nomorNpwp: "987654321" },
+            modeDemo: true,
+          }));
+          return;
+        }
+
         const contohBerkas = (nama: string, id: string) =>
           buildSamplePdf(nama.toUpperCase(), [
             `Berkas contoh untuk ${nama}`,

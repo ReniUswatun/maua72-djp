@@ -14,6 +14,7 @@ import {
   type RolePermissionMap,
 } from "@/lib/rbac";
 import type {
+  ActivityEntry,
   AdminAccount,
   AdminRole,
   ApplicationCase,
@@ -42,8 +43,14 @@ interface AdminState {
   accounts: AdminAccount[];
   cases: ApplicationCase[];
   rolePermissions: RolePermissionMap;
+  activityLog: ActivityEntry[];
 
   setHydrated: () => void;
+
+  /** Catat aktivitas admin lintas modul (dipantau super admin). */
+  logActivity: (kategori: string, action: string, detail?: string) => void;
+  /** Upsert case dari pengajuan UMKM (jembatan store, dipanggil komponen). */
+  upsertCaseFromPengajuan: (caseData: ApplicationCase) => void;
 
   login: (email: string, password: string) => { ok: boolean; role?: AdminRole; message?: string };
   logout: () => void;
@@ -95,9 +102,35 @@ export const useAdminStore = create<AdminState>()(
       hydrated: false,
       session: null,
       rolePermissions: defaultRolePermissions(),
+      activityLog: [],
       ...loadAdminSnapshot(),
 
       setHydrated: () => set({ hydrated: true }),
+
+      logActivity: (kategori, action, detail) =>
+        set((state) => ({
+          activityLog: [
+            {
+              id: nextId("act"),
+              timestamp: now(),
+              admin: state.session?.nama ?? "Admin",
+              kategori,
+              action,
+              detail,
+            },
+            ...state.activityLog,
+          ].slice(0, 200),
+        })),
+
+      upsertCaseFromPengajuan: (caseData) =>
+        set((state) => {
+          const exists = state.cases.some((c) => c.id === caseData.id);
+          return {
+            cases: exists
+              ? state.cases.map((c) => (c.id === caseData.id ? caseData : c))
+              : [caseData, ...state.cases],
+          };
+        }),
 
       login: (email, password) => {
         const matched = resolveAdminLogin(email, password);
@@ -323,14 +356,20 @@ export const useAdminStore = create<AdminState>()(
     }),
     {
       name: "siapekspor-admin-state",
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => localStorage),
       partialize: ({ hydrated, ...rest }) => rest,
-      // Naikkan versi ketika daftar permission bawaan berubah; buang
-      // rolePermissions lama supaya peran mendapat default terbaru.
+      // Naikkan versi ketika seed data / daftar permission bawaan berubah.
+      // v4: buang cases + accounts + rolePermissions lama supaya seed baru
+      // (dokumen ber-PDF, akun peran "admin") termuat ulang.
       migrate: (persisted) => {
         if (persisted && typeof persisted === "object") {
-          const { rolePermissions: _drop, ...rest } = persisted as Record<string, unknown>;
+          const {
+            rolePermissions: _dropPerms,
+            cases: _dropCases,
+            accounts: _dropAccounts,
+            ...rest
+          } = persisted as Record<string, unknown>;
           return rest as never;
         }
         return persisted as never;

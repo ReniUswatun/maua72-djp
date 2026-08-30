@@ -3,26 +3,48 @@
  * yang diunggah UMKM pada prototipe (belum ada storage berkas nyata).
  *
  * Membuat PDF satu halaman yang valid (xref offset dihitung) berisi
- * beberapa baris teks, lalu mengembalikannya sebagai data URI.
+ * judul, garis, beberapa baris teks, dan footer, lalu mengembalikannya
+ * sebagai data URI.
  * ------------------------------------------------------------------ */
 
 function escapePdfText(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)")
+    // sederhanakan karakter non-ASCII agar aman di PDF Type1 Helvetica
+    .replace(/[^\x20-\x7E]/g, "-");
 }
 
 /** Bangun PDF satu halaman dari judul + daftar baris teks. */
-export function buildSamplePdf(judul: string, baris: string[]): string {
-  const lines = [judul, "", ...baris];
-  const content =
-    "BT\n/F1 16 Tf\n40 780 Td\n18 TL\n" +
-    lines
-      .map((line, index) =>
-        index === 0
-          ? `(${escapePdfText(line)}) Tj`
-          : `T* (${escapePdfText(line)}) Tj`,
-      )
-      .join("\n") +
-    "\nET";
+export function buildSamplePdf(judul: string, baris: string[], subjudul?: string): string {
+  const bodyLines = baris.length ? baris : ["(tidak ada rincian)"];
+
+  const parts: string[] = [];
+  // Judul
+  parts.push("0.11 0.13 0.20 rg");
+  parts.push(`BT /F1 20 Tf 40 792 Td (${escapePdfText(judul)}) Tj ET`);
+  if (subjudul) {
+    parts.push("0.45 0.45 0.45 rg");
+    parts.push(`BT /F1 10 Tf 40 776 Td (${escapePdfText(subjudul)}) Tj ET`);
+  }
+  // Garis pemisah
+  parts.push("0.75 0.75 0.75 RG 0.8 w");
+  parts.push(`40 ${subjudul ? 766 : 780} m 555 ${subjudul ? 766 : 780} l S`);
+  // Isi
+  parts.push("0.12 0.12 0.12 rg");
+  parts.push(`BT /F1 11.5 Tf 40 ${subjudul ? 742 : 756} Td 17 TL`);
+  bodyLines.forEach((line, index) => {
+    parts.push(`${index === 0 ? "" : "T* "}(${escapePdfText(line)}) Tj`);
+  });
+  parts.push("ET");
+  // Footer
+  parts.push("0.55 0.55 0.55 rg");
+  parts.push(
+    `BT /F1 8 Tf 40 36 Td (Dokumen contoh - SiapEkspor - dibuat otomatis untuk prototipe) Tj ET`,
+  );
+
+  const content = parts.join("\n");
 
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",

@@ -7,6 +7,7 @@ import {
   ArrowUp,
   Eye,
   EyeOff,
+  ImagePlus,
   Lock,
   Pencil,
   Plus,
@@ -20,61 +21,196 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FieldError, Input, Label, Select, Textarea } from "@/components/ui/input";
-import { useCan } from "@/store/admin-store";
+import { formatTanggalPendek } from "@/lib/utils";
+import { useAdminStore, useCan } from "@/store/admin-store";
 import { usePanduanSorted, usePanduanStore, type PanduanEntryInput } from "@/store/panduan-store";
-import type { PanduanEntry } from "@/lib/types";
+import type { PanduanBlok, PanduanBlokTipe, PanduanEntry } from "@/lib/types";
 
-/* ---------- serialisasi field daftar ke/dari textarea ---------- */
+const BLOK_LABEL: Record<PanduanBlokTipe, string> = {
+  paragraf: "Paragraf",
+  poin: "Daftar poin",
+  langkah: "Langkah bernomor",
+  gambar: "Gambar",
+  catatan: "Kotak catatan",
+  tautan: "Tautan",
+};
 
-function poinToText(poin: string[]) {
-  return poin.join("\n");
+/* ---------- serialisasi list <-> textarea (per blok) ---------- */
+
+const linesToItems = (t: string) => t.split("\n").map((l) => l.trim()).filter(Boolean);
+const itemsToLines = (items: string[]) => items.join("\n");
+
+function pairToLines(items: { judul?: string; teks?: string; detail?: string; url?: string }[], sep: "detail" | "url") {
+  return items
+    .map((i) => {
+      const kiri = i.judul ?? i.teks ?? "";
+      const kanan = (sep === "detail" ? i.detail : i.url) ?? "";
+      return kiri ? `${kiri} :: ${kanan}` : kanan;
+    })
+    .join("\n");
 }
-function textToPoin(text: string) {
-  return text.split("\n").map((l) => l.trim()).filter(Boolean);
+function linesToLangkah(t: string) {
+  return linesToItems(t).map((l) => {
+    const idx = l.indexOf("::");
+    return idx === -1 ? { judul: "", detail: l } : { judul: l.slice(0, idx).trim(), detail: l.slice(idx + 2).trim() };
+  });
 }
-function langkahToText(langkah: { judul: string; detail: string }[]) {
-  return langkah.map((l) => (l.judul ? `${l.judul} :: ${l.detail}` : l.detail)).join("\n");
-}
-function textToLangkah(text: string) {
-  return text
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((l) => {
-      const idx = l.indexOf("::");
-      if (idx === -1) return { judul: "", detail: l };
-      return { judul: l.slice(0, idx).trim(), detail: l.slice(idx + 2).trim() };
-    });
-}
-function tautanToText(tautan: { teks: string; url: string }[]) {
-  return tautan.map((t) => `${t.teks} :: ${t.url}`).join("\n");
-}
-function textToTautan(text: string) {
-  return text
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean)
+function linesToTautan(t: string) {
+  return linesToItems(t)
     .map((l) => {
       const idx = l.indexOf("::");
       if (idx === -1) return null;
       return { teks: l.slice(0, idx).trim(), url: l.slice(idx + 2).trim() };
     })
-    .filter((t): t is { teks: string; url: string } => Boolean(t && t.teks && t.url));
+    .filter((x): x is { teks: string; url: string } => Boolean(x && x.teks && x.url));
 }
 
+function emptyBlok(tipe: PanduanBlokTipe): PanduanBlok {
+  switch (tipe) {
+    case "poin":
+      return { tipe: "poin", items: [] };
+    case "langkah":
+      return { tipe: "langkah", items: [] };
+    case "gambar":
+      return { tipe: "gambar", dataUrl: "" };
+    case "catatan":
+      return { tipe: "catatan", teks: "" };
+    case "tautan":
+      return { tipe: "tautan", items: [] };
+    default:
+      return { tipe: "paragraf", teks: "" };
+  }
+}
+
+async function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as string);
+    fr.onerror = reject;
+    fr.readAsDataURL(file);
+  });
+}
+
+/* ---------- editor satu blok ---------- */
+
+function BlokEditor({
+  blok,
+  onChange,
+  onHapus,
+  onNaik,
+  onTurun,
+}: {
+  blok: PanduanBlok;
+  onChange: (next: PanduanBlok) => void;
+  onHapus: () => void;
+  onNaik: () => void;
+  onTurun: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <Badge tone="neutral">{BLOK_LABEL[blok.tipe]}</Badge>
+        <div className="flex gap-1.5">
+          <Button size="sm" variant="outline" onClick={onNaik} aria-label="Naikkan blok">
+            <ArrowUp className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button size="sm" variant="outline" onClick={onTurun} aria-label="Turunkan blok">
+            <ArrowDown className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button size="sm" variant="danger" onClick={onHapus} aria-label="Hapus blok">
+            <Trash2 className="h-4 w-4" aria-hidden />
+          </Button>
+        </div>
+      </div>
+
+      {blok.tipe === "paragraf" || blok.tipe === "catatan" ? (
+        <Textarea
+          value={blok.teks}
+          onChange={(e) => onChange({ ...blok, teks: e.target.value })}
+          className="min-h-[5rem]"
+          placeholder={blok.tipe === "catatan" ? "Catatan singkat yang menonjol." : "Tulis paragraf penjelasan."}
+        />
+      ) : null}
+
+      {blok.tipe === "poin" ? (
+        <Textarea
+          value={itemsToLines(blok.items)}
+          onChange={(e) => onChange({ tipe: "poin", items: linesToItems(e.target.value) })}
+          className="min-h-[6rem] font-mono text-sm"
+          placeholder={"Satu poin per baris"}
+        />
+      ) : null}
+
+      {blok.tipe === "langkah" ? (
+        <>
+          <p className="mb-1 text-xs text-gray-500">
+            Satu langkah per baris — format <span className="font-mono">Judul :: Detail</span>
+          </p>
+          <Textarea
+            value={pairToLines(blok.items, "detail")}
+            onChange={(e) => onChange({ tipe: "langkah", items: linesToLangkah(e.target.value) })}
+            className="min-h-[6rem] font-mono text-sm"
+          />
+        </>
+      ) : null}
+
+      {blok.tipe === "tautan" ? (
+        <>
+          <p className="mb-1 text-xs text-gray-500">
+            Satu tautan per baris — format <span className="font-mono">Teks :: https://…</span>
+          </p>
+          <Textarea
+            value={pairToLines(blok.items, "url")}
+            onChange={(e) => onChange({ tipe: "tautan", items: linesToTautan(e.target.value) })}
+            className="min-h-[4rem] font-mono text-sm"
+          />
+        </>
+      ) : null}
+
+      {blok.tipe === "gambar" ? (
+        <div className="space-y-3">
+          {blok.dataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={blok.dataUrl} alt="" className="max-h-52 rounded-lg border border-gray-200" />
+          ) : null}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (!f) return;
+              if (f.size > 2_000_000) {
+                alert("Gambar terlalu besar (maks 2 MB).");
+                return;
+              }
+              const dataUrl = await fileToDataUrl(f);
+              onChange({ ...blok, dataUrl });
+            }}
+            className="block text-sm text-gray-600 file:mr-3 file:rounded-lg file:border file:border-gray-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium"
+          />
+          <Input
+            value={blok.keterangan ?? ""}
+            onChange={(e) => onChange({ ...blok, keterangan: e.target.value })}
+            placeholder="Keterangan gambar (opsional)"
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/* ---------- editor artikel ---------- */
+
 const KOSONG: PanduanEntryInput = {
-  tipe: "tahap",
   judul: "",
   ringkas: "",
-  deskripsi: "",
-  poin: [],
-  langkah: [],
-  tautan: [],
-  dibuatSendiri: false,
+  gambarSampul: undefined,
+  blok: [{ tipe: "paragraf", teks: "" }],
   status: "draf",
 };
 
-function EntryForm({
+function ArticleEditor({
   awal,
   judulForm,
   onSimpan,
@@ -85,16 +221,20 @@ function EntryForm({
   onSimpan: (value: PanduanEntryInput) => void;
   onBatal: () => void;
 }) {
-  const [tipe, setTipe] = React.useState(awal.tipe);
   const [judul, setJudul] = React.useState(awal.judul);
   const [ringkas, setRingkas] = React.useState(awal.ringkas);
-  const [deskripsi, setDeskripsi] = React.useState(awal.deskripsi);
-  const [poin, setPoin] = React.useState(poinToText(awal.poin));
-  const [langkah, setLangkah] = React.useState(langkahToText(awal.langkah));
-  const [tautan, setTautan] = React.useState(tautanToText(awal.tautan));
-  const [dibuatSendiri, setDibuatSendiri] = React.useState(awal.dibuatSendiri);
+  const [gambarSampul, setGambarSampul] = React.useState(awal.gambarSampul);
+  const [blok, setBlok] = React.useState<PanduanBlok[]>(awal.blok);
   const [status, setStatus] = React.useState(awal.status);
+  const [tambahTipe, setTambahTipe] = React.useState<PanduanBlokTipe>("paragraf");
   const [error, setError] = React.useState<string | null>(null);
+
+  const swap = (i: number, j: number) => {
+    if (j < 0 || j >= blok.length) return;
+    const next = [...blok];
+    [next[i], next[j]] = [next[j], next[i]];
+    setBlok(next);
+  };
 
   const simpan = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,21 +243,11 @@ function EntryForm({
       return;
     }
     setError(null);
-    onSimpan({
-      tipe,
-      judul,
-      ringkas,
-      deskripsi: deskripsi.trim(),
-      poin: textToPoin(poin),
-      langkah: textToLangkah(langkah),
-      tautan: textToTautan(tautan),
-      dibuatSendiri: tipe === "dokumen" ? dibuatSendiri : false,
-      status,
-    });
+    onSimpan({ judul, ringkas, gambarSampul, blok, status });
   };
 
   return (
-    <form onSubmit={simpan} className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-5">
+    <form onSubmit={simpan} className="space-y-5 rounded-xl border border-gray-200 bg-gray-50 p-5">
       <div className="flex items-center justify-between">
         <p className="font-semibold text-gray-900">{judulForm}</p>
         <Button type="button" size="sm" variant="ghost" onClick={onBatal}>
@@ -126,26 +256,18 @@ function EntryForm({
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
         <div className="space-y-2">
-          <Label htmlFor="pd-tipe">Tipe</Label>
-          <Select id="pd-tipe" value={tipe} onChange={(e) => setTipe(e.target.value as PanduanEntry["tipe"])}>
-            <option value="tahap">Tahap alur</option>
-            <option value="dokumen">Panduan dokumen</option>
-          </Select>
+          <Label htmlFor="pd-judul">Judul langkah</Label>
+          <Input id="pd-judul" value={judul} onChange={(e) => setJudul(e.target.value)} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="pd-status">Status</Label>
           <Select id="pd-status" value={status} onChange={(e) => setStatus(e.target.value as PanduanEntry["status"])}>
-            <option value="terbit">Terbit (tampil ke UMKM)</option>
-            <option value="draf">Draf (disembunyikan)</option>
+            <option value="terbit">Terbit</option>
+            <option value="draf">Draf</option>
           </Select>
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="pd-judul">Judul</Label>
-        <Input id="pd-judul" value={judul} onChange={(e) => setJudul(e.target.value)} />
       </div>
 
       <div className="space-y-2">
@@ -154,46 +276,83 @@ function EntryForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="pd-deskripsi">Deskripsi (paragraf)</Label>
-        <Textarea id="pd-deskripsi" value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} className="min-h-[5rem]" />
+        <Label>Gambar sampul (opsional)</Label>
+        {gambarSampul ? (
+          <div className="flex items-start gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={gambarSampul} alt="" className="max-h-40 rounded-lg border border-gray-200" />
+            <Button type="button" size="sm" variant="outline" onClick={() => setGambarSampul(undefined)}>
+              Hapus
+            </Button>
+          </div>
+        ) : (
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <ImagePlus className="h-4 w-4" aria-hidden />
+            Unggah gambar
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                if (f.size > 2_000_000) {
+                  alert("Gambar terlalu besar (maks 2 MB).");
+                  return;
+                }
+                setGambarSampul(await fileToDataUrl(f));
+              }}
+            />
+          </label>
+        )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="pd-poin">Poin (satu baris = satu poin)</Label>
-        <Textarea id="pd-poin" value={poin} onChange={(e) => setPoin(e.target.value)} className="min-h-[6rem] font-mono text-sm" />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="pd-langkah">Langkah bernomor — format: <span className="font-mono">Judul :: Detail</span> per baris</Label>
-        <Textarea id="pd-langkah" value={langkah} onChange={(e) => setLangkah(e.target.value)} className="min-h-[6rem] font-mono text-sm" />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="pd-tautan">Tautan — format: <span className="font-mono">Teks :: https://…</span> per baris</Label>
-        <Textarea id="pd-tautan" value={tautan} onChange={(e) => setTautan(e.target.value)} className="min-h-[4rem] font-mono text-sm" />
-      </div>
-
-      {tipe === "dokumen" ? (
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-gray-300"
-            checked={dibuatSendiri}
-            onChange={(e) => setDibuatSendiri(e.target.checked)}
+      <div className="space-y-3">
+        <Label>Isi artikel</Label>
+        {blok.map((b, i) => (
+          <BlokEditor
+            key={i}
+            blok={b}
+            onChange={(next) => setBlok(blok.map((x, xi) => (xi === i ? next : x)))}
+            onHapus={() => setBlok(blok.filter((_, xi) => xi !== i))}
+            onNaik={() => swap(i, i - 1)}
+            onTurun={() => swap(i, i + 1)}
           />
-          Dokumen ini dibuat sendiri oleh eksportir (bukan diurus ke instansi)
-        </label>
-      ) : null}
+        ))}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={tambahTipe}
+            onChange={(e) => setTambahTipe(e.target.value as PanduanBlokTipe)}
+            className="w-auto"
+          >
+            {(Object.keys(BLOK_LABEL) as PanduanBlokTipe[]).map((t) => (
+              <option key={t} value={t}>
+                {BLOK_LABEL[t]}
+              </option>
+            ))}
+          </Select>
+          <Button type="button" variant="outline" size="sm" onClick={() => setBlok([...blok, emptyBlok(tambahTipe)])}>
+            <Plus className="h-4 w-4" aria-hidden />
+            Tambah blok
+          </Button>
+        </div>
+      </div>
 
       {error ? <FieldError>{error}</FieldError> : null}
 
       <div className="flex gap-2">
-        <Button type="submit">Simpan</Button>
-        <Button type="button" variant="ghost" onClick={onBatal}>Batal</Button>
+        <Button type="submit">Simpan langkah</Button>
+        <Button type="button" variant="ghost" onClick={onBatal}>
+          Batal
+        </Button>
       </div>
     </form>
   );
 }
+
+/* ---------- panel ---------- */
 
 export function PanduanCmsPanel() {
   const hydrated = usePanduanStore((s) => s.hydrated);
@@ -206,6 +365,9 @@ export function PanduanCmsPanel() {
   const pindah = usePanduanStore((s) => s.pindah);
   const setStatus = usePanduanStore((s) => s.setStatus);
   const resetPanduan = usePanduanStore((s) => s.resetPanduan);
+
+  const logActivity = useAdminStore((s) => s.logActivity);
+  const namaAdmin = useAdminStore((s) => s.session?.nama ?? "Admin");
 
   const [mode, setMode] = React.useState<"list" | "baru" | string>("list");
   const [feedback, setFeedback] = React.useState<string | null>(null);
@@ -223,28 +385,35 @@ export function PanduanCmsPanel() {
     );
   }
 
-  const editing = typeof mode === "string" && mode !== "list" && mode !== "baru"
-    ? entries.find((e) => e.id === mode) ?? null
-    : null;
+  const editing =
+    typeof mode === "string" && mode !== "list" && mode !== "baru"
+      ? entries.find((e) => e.id === mode) ?? null
+      : null;
 
   return (
     <div className="space-y-6">
       <div>
-        <p className="eyebrow">Super Admin · Konten</p>
+        <p className="eyebrow">Ruang Kerja Admin · Konten</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight">Kelola panduan ekspor</h1>
         <p className="mt-2 max-w-2xl leading-relaxed text-gray-600">
-          Tambah, sunting, atur urutan, sembunyikan, atau hapus entri panduan. Perubahan langsung
-          tampil di halaman panduan UMKM. Entri inti bawaan bisa disunting tapi tidak bisa dihapus —
-          sembunyikan saja (jadikan draf).
+          Panduan = daftar langkah berurutan; tiap langkah adalah artikel dengan halaman sendiri.
+          Perubahan langsung tampil ke UMKM dan tercatat di Log Aktivitas super admin. Langkah inti
+          bawaan bisa disunting tapi tidak bisa dihapus — sembunyikan saja (jadikan draf).
         </p>
       </div>
 
       <Card className="border-gray-200">
         <CardContent className="flex flex-wrap gap-3 p-6">
           {mode !== "baru" ? (
-            <Button onClick={() => { setMode("baru"); setFeedback(null); setError(null); }}>
+            <Button
+              onClick={() => {
+                setMode("baru");
+                setFeedback(null);
+                setError(null);
+              }}
+            >
               <Plus className="h-4 w-4" aria-hidden />
-              Tambah Entri
+              Tambah Langkah
             </Button>
           ) : null}
           <Link href="/panduan" target="_blank">
@@ -258,6 +427,7 @@ export function PanduanCmsPanel() {
             onClick={() => {
               if (window.confirm("Kembalikan seluruh panduan ke isi bawaan? Semua perubahan hilang.")) {
                 resetPanduan();
+                logActivity("panduan", "Panduan dikembalikan ke bawaan");
                 setMode("list");
                 setFeedback("Panduan dikembalikan ke isi bawaan.");
               }
@@ -273,37 +443,35 @@ export function PanduanCmsPanel() {
       {error ? <Alert tone="danger" judul="Gagal">{error}</Alert> : null}
 
       {mode === "baru" ? (
-        <EntryForm
+        <ArticleEditor
           awal={KOSONG}
-          judulForm="Entri Panduan Baru"
+          judulForm="Langkah panduan baru"
           onBatal={() => setMode("list")}
           onSimpan={(value) => {
-            tambahEntry(value);
+            tambahEntry(value, namaAdmin);
+            logActivity("panduan", "Langkah panduan ditambahkan", value.judul.trim());
             setMode("list");
-            setFeedback(`Entri "${value.judul}" ditambahkan.`);
+            setFeedback(`Langkah "${value.judul}" ditambahkan.`);
           }}
         />
       ) : null}
 
       {editing ? (
-        <EntryForm
+        <ArticleEditor
           awal={{
-            tipe: editing.tipe,
             judul: editing.judul,
             ringkas: editing.ringkas,
-            deskripsi: editing.deskripsi,
-            poin: editing.poin,
-            langkah: editing.langkah,
-            tautan: editing.tautan,
-            dibuatSendiri: editing.dibuatSendiri,
+            gambarSampul: editing.gambarSampul,
+            blok: editing.blok,
             status: editing.status,
           }}
           judulForm={`Sunting: ${editing.judul}`}
           onBatal={() => setMode("list")}
           onSimpan={(value) => {
-            ubahEntry(editing.id, value);
+            ubahEntry(editing.id, value, namaAdmin);
+            logActivity("panduan", "Langkah panduan disunting", value.judul.trim());
             setMode("list");
-            setFeedback(`Entri "${value.judul}" diperbarui.`);
+            setFeedback(`Langkah "${value.judul}" diperbarui.`);
           }}
         />
       ) : null}
@@ -315,9 +483,6 @@ export function PanduanCmsPanel() {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-semibold text-gray-400">#{index + 1}</span>
-                  <Badge tone={entry.tipe === "tahap" ? "info" : "neutral"}>
-                    {entry.tipe === "tahap" ? "Tahap" : "Dokumen"}
-                  </Badge>
                   <Badge tone={entry.status === "terbit" ? "success" : "warning"}>
                     {entry.status === "terbit" ? "Terbit" : "Draf"}
                   </Badge>
@@ -330,6 +495,12 @@ export function PanduanCmsPanel() {
                 </div>
                 <p className="mt-1 font-semibold text-gray-900">{entry.judul}</p>
                 {entry.ringkas ? <p className="text-sm text-gray-500">{entry.ringkas}</p> : null}
+                {entry.diperbaruiOleh ? (
+                  <p className="mt-1 text-xs text-gray-400">
+                    diperbarui oleh {entry.diperbaruiOleh}
+                    {entry.diperbaruiPada ? ` · ${formatTanggalPendek(entry.diperbaruiPada)}` : ""}
+                  </p>
+                ) : null}
               </div>
 
               <div className="flex flex-wrap gap-1.5">
@@ -342,12 +513,24 @@ export function PanduanCmsPanel() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setStatus(entry.id, entry.status === "terbit" ? "draf" : "terbit")}
+                  onClick={() => {
+                    const next = entry.status === "terbit" ? "draf" : "terbit";
+                    setStatus(entry.id, next);
+                    logActivity("panduan", next === "terbit" ? "Langkah panduan diterbitkan" : "Langkah panduan disembunyikan", entry.judul);
+                  }}
                 >
                   {entry.status === "terbit" ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
                   {entry.status === "terbit" ? "Sembunyikan" : "Terbitkan"}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => { setMode(entry.id); setFeedback(null); setError(null); }}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setMode(entry.id);
+                    setFeedback(null);
+                    setError(null);
+                  }}
+                >
                   <Pencil className="h-4 w-4" aria-hidden />
                   Sunting
                 </Button>
@@ -356,10 +539,13 @@ export function PanduanCmsPanel() {
                   variant="danger"
                   disabled={entry.terkunci}
                   onClick={() => {
-                    if (!window.confirm(`Hapus entri "${entry.judul}"?`)) return;
+                    if (!window.confirm(`Hapus langkah "${entry.judul}"?`)) return;
                     const res = hapusEntry(entry.id);
                     if (!res.ok) setError(res.message ?? "Gagal menghapus.");
-                    else setFeedback(`Entri "${entry.judul}" dihapus.`);
+                    else {
+                      logActivity("panduan", "Langkah panduan dihapus", entry.judul);
+                      setFeedback(`Langkah "${entry.judul}" dihapus.`);
+                    }
                   }}
                 >
                   <Trash2 className="h-4 w-4" aria-hidden />
