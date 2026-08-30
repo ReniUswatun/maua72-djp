@@ -13,9 +13,17 @@ Dibangun untuk **Hackathon Hilirisasi Maua 72 — Kantor Bea dan Cukai Surakarta
 
 ---
 
-## Handover — satu halaman, tidak lebih
+## Live
 
-### Apa yang dikerjakan aplikasi ini
+- Server sendiri: **https://mua-djp.reniuswatun.my.id/**
+- Vercel (cadangan): **https://maua72-djp.vercel.app/**
+
+Server sendiri adalah yang utama; Vercel dipakai kalau internet rumah putus saat
+demo.
+
+---
+
+## Tentang aplikasi
 
 UMKM mengisi profil usaha (termasuk berkas NIB & NPWP), membuat **pengajuan
 ekspor** (produk, HS Code, nilai, pembeli, negara tujuan), lalu mengunggah
@@ -29,32 +37,6 @@ setujui, minta revisi, atau tolak, dengan catatan. UMKM memperbaiki dan
 mengirim ulang sampai pengajuan `selesai`. Di samping alur utama ada **panduan
 ekspor** berurutan, **konsultasi berbentuk tiket**, dan **super admin** untuk
 mengelola akun petugas beserta hak aksesnya.
-
-### Siapa yang menjalankan
-
-Reni Uswatun (`gitvibecode@gmail.com`). Aplikasi dijalankan dari server milik
-sendiri sebagai container Docker dan dipublikasikan lewat Cloudflare Tunnel di
-**reniuswatun.my.id**. Tidak ada backend, database, atau layanan berbayar yang
-perlu dijaga — OCR berjalan di browser pengunjung.
-
-### Biaya untuk merawatnya
-
-| Komponen | Biaya |
-|---|---|
-| Domain `reniuswatun.my.id` | ~Rp 15–30 rb / tahun |
-| Server | PC milik Reni (hanya listrik), atau Vercel free tier |
-| Cloudflare Tunnel | Gratis |
-| Backend / database / API | Tidak ada |
-
-### Kalau rusak, lakukan ini
-
-| Gejala | Tindakan |
-|---|---|
-| Situs tidak terbuka di domain | `docker restart siapekspor`, lalu `cloudflared tunnel run siapekspor` |
-| Internet rumah putus | Alihkan demo ke URL cadangan di Vercel (lihat bagian Deploy) |
-| Container gagal start setelah perubahan | Rebuild image: `docker build --network=host -t siapekspor:latest .` lalu recreate container |
-| Data demo aneh / menumpuk di browser | Hapus site data untuk domain tersebut (localStorage), muat ulang |
-| OCR gagal baca sebuah PDF | Wajar untuk scan buram; petugas tetap bisa menilai manual |
 
 ---
 
@@ -164,65 +146,6 @@ Uji cepat: `tsx scripts/test-ocr.ts` (PDF contoh dibuat dengan
 
 ---
 
-## Deploy
-
-Dua opsi dijalankan bersamaan. **Server sendiri** adalah yang utama; **Vercel**
-adalah cadangan kalau internet rumah putus saat demo, dan URL-nya bisa langsung
-dipakai tanpa menyiapkan apa pun.
-
-### Opsi A — Server sendiri (Docker + Cloudflare Tunnel)
-
-```bash
-# build (--network=host wajib di mesin ini: resolver DNS bridge default tidak jalan)
-docker build --network=host -t siapekspor:latest .
-docker run -d --name siapekspor --restart unless-stopped -p 1555:1555 siapekspor:latest
-# cek: http://localhost:1555
-```
-
-Image memakai Next.js standalone output; container listen di port **1555**.
-Deploy ulang = rebuild image lalu `docker rm -f siapekspor` dan `docker run` lagi.
-
-Publikasikan lewat named tunnel supaya memakai domain sendiri:
-
-```bash
-cloudflared tunnel login                       # pilih zona reniuswatun.my.id
-cloudflared tunnel create siapekspor           # simpan <TUNNEL_ID>.json
-cloudflared tunnel route dns siapekspor reniuswatun.my.id
-```
-
-`~/.cloudflared/config.yml`:
-
-```yaml
-tunnel: siapekspor
-credentials-file: /home/reni/.cloudflared/<TUNNEL_ID>.json
-ingress:
-  - hostname: reniuswatun.my.id
-    service: http://localhost:1555
-  - service: http_status:404
-```
-
-```bash
-cloudflared tunnel run siapekspor              # atau: cloudflared service install
-```
-
-Cara cepat tanpa DNS (URL acak `*.trycloudflare.com`):
-`cloudflared tunnel --url http://localhost:1555`.
-
-### Opsi B — Vercel (cadangan)
-
-Tanpa konfigurasi: tidak ada environment variable, tidak ada backend. Next.js 14
-terdeteksi otomatis dan OCR berjalan di browser pengunjung.
-
-```bash
-npm i -g vercel
-vercel            # deploy preview
-vercel --prod     # deploy produksi, dapat URL *.vercel.app
-```
-
-Atau hubungkan repo di dashboard Vercel supaya tiap push ke `dev` otomatis
-ter-deploy. Simpan URL `*.vercel.app` sebagai cadangan demo.
-
----
 
 ## Checklist demo — Jam 72
 
@@ -236,7 +159,7 @@ Yang harus tampil di layar saat presentasi:
   menandai field yang keliru sebelum dikirim. Di sisi petugas, tunjukkan timer
   SLA di `/admin/pengajuan`.
 - **Nama pemiliknya.** Reni Uswatun — dijalankan dari server sendiri di
-  `reniuswatun.my.id`, dengan cadangan Vercel.
+  `mua-djp.reniuswatun.my.id`, dengan cadangan di `maua72-djp.vercel.app`.
 - **Bagian yang masih rusak.** Sampaikan terus terang: belum ada backend jadi
   data hanya di `localStorage` satu browser dan tidak sinkron antar perangkat;
   OCR bisa `gagal_baca` untuk scan buram; `pdfjs-dist` v6 tidak jalan di Node
