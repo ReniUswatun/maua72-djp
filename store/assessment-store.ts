@@ -137,15 +137,19 @@ export const useAppStore = create<AppState>()(
       setHydrated: () => set({ hydrated: true }),
 
       daftar: (u) =>
-        set((s) => ({
+        set({
           user: u,
-          timeline: catat(s.timeline, {
+          profile: null,
+          pengajuan: [],
+          tickets: [],
+          modeDemo: false,
+          timeline: catat([], {
             kind: "pesan",
             judul: "Akun dibuat",
             detail: `Selamat datang, ${u.nama}. Lengkapi profil usaha untuk mulai pengajuan ekspor.`,
             aktor: "Sistem",
           }),
-        })),
+        }),
 
       masuk: (email) =>
         set((s) => ({
