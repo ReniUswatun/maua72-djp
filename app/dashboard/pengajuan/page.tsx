@@ -20,6 +20,7 @@ const FILTER: { id: PengajuanStatus | "all"; label: string }[] = [
 ];
 
 export default function RiwayatPengajuanPage() {
+  const profile = useAppStore((s) => s.profile);
   const pengajuan = useAppStore((s) => s.pengajuan);
   const [filter, setFilter] = React.useState<PengajuanStatus | "all">("all");
 
@@ -37,12 +38,37 @@ export default function RiwayatPengajuanPage() {
             dokumen, catatan petugas, dan mengirim ulang bila diminta revisi.
           </p>
         </div>
-        <Link href="/dashboard/pengajuan/baru">
-          <Button size="lg">
-            <Plus className="h-5 w-5" aria-hidden />
-            Buat Pengajuan Baru
-          </Button>
-        </Link>
+        {(() => {
+          const profilLengkap = !!(
+            profile?.namaUsaha?.trim() &&
+            profile?.kota?.trim() &&
+            profile?.provinsi?.trim() &&
+            profile?.tahunBerdiri?.trim() &&
+            profile?.kategoriId?.trim()
+          );
+          const nibOk = !!(profile?.nomorNib?.trim()) && !!(profile?.fileNib);
+          const siapEkspor = profilLengkap && nibOk;
+
+          if (siapEkspor) {
+            return (
+              <Link href="/dashboard/pengajuan/baru">
+                <Button size="lg">
+                  <Plus className="h-5 w-5" aria-hidden />
+                  Buat Pengajuan Baru
+                </Button>
+              </Link>
+            );
+          }
+          return (
+            <div className="flex flex-col items-end gap-1">
+              <Button size="lg" disabled>
+                <Plus className="h-5 w-5" aria-hidden />
+                Buat Pengajuan Baru
+              </Button>
+              <p className="text-xs text-amber-600 font-medium">Lengkapi Profil terlebih dahulu</p>
+            </div>
+          );
+        })()}
       </div>
 
       {pengajuan.length > 0 ? (

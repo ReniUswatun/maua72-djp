@@ -78,8 +78,9 @@ interface AppState {
   daftar: (u: User) => void;
   masuk: (email: string) => void;
   keluar: () => void;
+  updateUser: (data: Partial<User>) => void;
   simpanProfil: (p: BusinessProfile) => void;
-  simpanBerkasUsaha: (jenis: "nib" | "npwp", fileUrl: string | null) => void;
+  simpanBerkasUsaha: (jenis: "nib" | "npwp", fileUrl: string | null, nomorEkstrak?: string) => void;
 
   // Pengajuan actions
   buatPengajuan: (data: Omit<PengajuanEkspor, "id" | "status" | "dokumen" | "tanggal">) => string;
@@ -151,7 +152,12 @@ export const useAppStore = create<AppState>()(
           user: s.user ?? { nama: email.split("@")[0], email, hp: "" },
         })),
 
-      keluar: () => set({ ...stateAwal, hydrated: true }),
+      keluar: () => set({ user: null }),
+
+      updateUser: (data) =>
+        set((s) => ({
+          user: s.user ? { ...s.user, ...data } : null,
+        })),
 
       simpanProfil: (p) =>
         set((s) => ({
@@ -164,12 +170,19 @@ export const useAppStore = create<AppState>()(
           }),
         })),
 
-      simpanBerkasUsaha: (jenis, fileUrl) =>
+      simpanBerkasUsaha: (jenis, fileUrl, nomorEkstrak) =>
         set((s) => {
           if (!s.profile) return s;
           const key = jenis === "nib" ? "fileNib" : "fileNpwp";
+          const numKey = jenis === "nib" ? "nomorNib" : "nomorNpwp";
+          
+          const newProfile = { ...s.profile, [key]: fileUrl };
+          if (nomorEkstrak) {
+            newProfile[numKey] = nomorEkstrak;
+          }
+
           return {
-            profile: { ...s.profile, [key]: fileUrl },
+            profile: newProfile,
             timeline: catat(s.timeline, {
               kind: "dokumen",
               judul: fileUrl
@@ -253,8 +266,37 @@ export const useAppStore = create<AppState>()(
           const pengajuanList = s.pengajuan.map((p) =>
             p.id === pengajuanId
               ? { ...p, status: "review" as const, catatanReview: undefined }
-              : p,
+              : p
           );
+
+          // Sinkronisasi lokal ke Admin Store untuk keperluan demo
+          if (target && s.user && s.profile) {
+            import("./admin-store").then(({ useAdminStore }) => {
+              const newCase: any = {
+                id: target.id,
+                businessName: s.profile!.namaUsaha,
+                ownerName: s.user!.nama,
+                email: s.user!.email,
+                phone: s.user!.hp,
+                city: s.profile!.kota,
+                province: s.profile!.provinsi,
+                kategori: s.profile!.kategoriId,
+                status: dikirimUlang ? "membutuhkan_info" : "baru",
+                submittedAt: new Date().toISOString(),
+                lastUpdatedAt: new Date().toISOString(),
+                profile: s.profile!,
+                dataUsaha: "menunggu",
+                namaProduk: target.namaProduk,
+                negaraTujuan: target.negaraTujuan,
+                hsCode: target.hsCode,
+                nilaiEkspor: target.nilaiEkspor,
+                documents: target.dokumen,
+                timeline: s.timeline,
+                auditTrail: [],
+              };
+              useAdminStore.getState().receiveCaseFromUMKM(newCase);
+            });
+          }
 
           return {
             pengajuan: pengajuanList,
@@ -487,11 +529,30 @@ export const useAppStore = create<AppState>()(
           }),
         };
 
+        const pengajuanDisetujui: PengajuanEkspor = {
+          id: "PE-202606-WOOD",
+          tanggal: "2026-06-10T10:00:00.000Z",
+          namaProduk: "Meja Kayu Jati",
+          negaraTujuan: "Jepang",
+          hsCode: "9403.60.00",
+          nilaiEkspor: "22000",
+          pembeli: "Tokyo Furniture Inc",
+          tanggalKirim: "2026-07-01",
+          status: "selesai",
+          catatanReview: "Semua dokumen sudah sesuai. Persetujuan ekspor (NPE) telah diterbitkan.",
+          dokumen: DEFAULT_DOCUMENTS.map((d) => ({
+            ...d,
+            status: "diverifikasi",
+            namaFile: `${d.id}-final.pdf`,
+            tanggal: "2026-06-10T10:00:00.000Z",
+            fileUrl: contohBerkas(d.nama, "PE-202606-WOOD"),
+          })),
+        };
 
         set({
           user: DEMO_USER,
           profile: { ...DEMO_PROFILE, nomorNib: "1234567890123", nomorNpwp: "987654321" },
-          pengajuan: [pengajuanReview, pengajuanDitolak],
+          pengajuan: [pengajuanReview, pengajuanDitolak, pengajuanDisetujui],
           timeline: [...MOCK_TIMELINE].sort(
             (a, b) => +new Date(b.tanggal) - +new Date(a.tanggal),
           ),

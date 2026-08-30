@@ -70,6 +70,7 @@ interface AdminState {
   submitReview: (caseId: string) => void;
   addCaseNote: (caseId: string, note: string) => void;
   saveWaDraft: (caseId: string, text: string) => void;
+  receiveCaseFromUMKM: (newCase: ApplicationCase) => void;
 }
 
 function now() {
@@ -353,6 +354,20 @@ export const useAdminStore = create<AdminState>()(
         set((state) => ({
           cases: updateCase(state.cases, caseId, (current) => ({ ...current, waDraft: text })),
         })),
+
+      receiveCaseFromUMKM: (newCase: ApplicationCase) => {
+        set((state) => {
+          const exists = state.cases.some((c) => c.id === newCase.id);
+          if (exists) {
+            return {
+              cases: state.cases.map((c) => (c.id === newCase.id ? { ...newCase, timeline: c.timeline, auditTrail: c.auditTrail } : c)),
+            };
+          }
+          return {
+            cases: [newCase, ...state.cases],
+          };
+        });
+      },
     }),
     {
       name: "siapekspor-admin-state",

@@ -35,8 +35,17 @@ export default function DashboardBeranda() {
           </p>
         </div>
         {(() => {
+          const profilLengkap = !!(
+            profile?.namaUsaha?.trim() &&
+            profile?.kota?.trim() &&
+            profile?.provinsi?.trim() &&
+            profile?.tahunBerdiri?.trim() &&
+            profile?.kategoriId?.trim()
+          );
           const nibOk = !!(profile?.nomorNib?.trim()) && !!(profile?.fileNib);
-          if (nibOk) {
+          const siapEkspor = profilLengkap && nibOk;
+          
+          if (siapEkspor) {
             return (
               <Link href="/dashboard/pengajuan/baru">
                 <Button size="lg">
@@ -52,28 +61,43 @@ export default function DashboardBeranda() {
                 <Plus className="mr-2 h-5 w-5" aria-hidden />
                 Buat Pengajuan Baru
               </Button>
-              <p className="text-xs text-amber-600 font-medium">Lengkapi NIB di Profil terlebih dahulu</p>
+              <p className="text-xs text-amber-600 font-medium">Lengkapi Profil terlebih dahulu</p>
             </div>
           );
         })()}
       </div>
 
-      {(!profile?.nomorNib?.trim() || !profile?.fileNib) ? (
-        <Alert
-          tone="warning"
-          judul="NIB Belum Lengkap"
-          icon={<FileText className="h-5 w-5 text-amber-600" aria-hidden />}
-        >
-          <p className="mb-3">
-            Nomor NIB dan dokumen NIB wajib diisi dan diunggah di halaman Profil sebelum bisa membuat pengajuan ekspor.
-          </p>
-          <Link href="/dashboard/profil">
-            <Button size="sm" variant="outline">
-              Lengkapi Profil
-            </Button>
-          </Link>
-        </Alert>
-      ) : null}
+      {(() => {
+        const profilLengkap = !!(
+          profile?.namaUsaha?.trim() &&
+          profile?.kota?.trim() &&
+          profile?.provinsi?.trim() &&
+          profile?.tahunBerdiri?.trim() &&
+          profile?.kategoriId?.trim()
+        );
+        const nibOk = !!(profile?.nomorNib?.trim()) && !!(profile?.fileNib);
+        const siapEkspor = profilLengkap && nibOk;
+        
+        if (!siapEkspor) {
+          return (
+            <Alert
+              tone="warning"
+              judul="Profil Usaha Belum Lengkap"
+              icon={<FileText className="h-5 w-5 text-amber-600" aria-hidden />}
+            >
+              <p className="mb-3">
+                Data usaha dan dokumen NIB wajib diisi dengan lengkap di halaman Profil sebelum bisa membuat pengajuan ekspor.
+              </p>
+              <Link href="/dashboard/profil">
+                <Button size="sm" variant="outline">
+                  Lengkapi Profil
+                </Button>
+              </Link>
+            </Alert>
+          );
+        }
+        return null;
+      })()}
 
       {perluTindakan.length > 0 ? (
         <Alert tone="danger" judul="Ada pengajuan yang perlu diperbaiki">

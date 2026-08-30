@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { openFileInNewTab } from "@/lib/file-url";
+import { FilePreviewModal } from "@/components/shared/FilePreviewModal";
 import { runOcr } from "@/lib/ocr-engine";
 import { formatTanggalPendek } from "@/lib/utils";
 import type { DocumentItem, DocumentOcrResult } from "@/lib/types";
@@ -28,6 +28,7 @@ const statusColor = {
 export function DocumentUploadItem({ doc, bolehEdit, onUpload }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState(false);
 
   const adaBerkas = doc.status === "diunggah" || doc.status === "diverifikasi";
   const iconCls = statusColor[doc.status] ?? statusColor.belum;
@@ -57,6 +58,13 @@ export function DocumentUploadItem({ doc, bolehEdit, onUpload }: Props) {
   };
 
   return (
+    <>
+      <FilePreviewModal
+        open={preview}
+        fileUrl={doc.fileUrl}
+        namaFile={doc.namaFile}
+        onClose={() => setPreview(false)}
+      />
     <li className="flex flex-col gap-4 border-b border-gray-100 pb-6 sm:flex-row sm:items-start sm:justify-between">
       {/* Left: icon + info */}
       <div className="flex items-start gap-4">
@@ -84,14 +92,18 @@ export function DocumentUploadItem({ doc, bolehEdit, onUpload }: Props) {
             <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-gray-50 p-2 text-sm">
               <FileText className="h-4 w-4 text-gray-400" aria-hidden />
               <span className="font-medium text-gray-900">{doc.namaFile}</span>
-              {doc.fileUrl && (
+              {doc.fileUrl ? (
                 <button
                   type="button"
-                  onClick={() => openFileInNewTab(doc.fileUrl)}
+                  onClick={() => setPreview(true)}
                   className="ml-1 font-semibold text-primary-700 hover:underline"
                 >
-                  Lihat PDF
+                  Lihat
                 </button>
+              ) : (
+                <span className="ml-1 text-xs text-amber-600">
+                  (file terlalu besar, tidak bisa ditampilkan)
+                </span>
               )}
             </div>
           )}
@@ -142,5 +154,6 @@ export function DocumentUploadItem({ doc, bolehEdit, onUpload }: Props) {
         </div>
       )}
     </li>
+    </>  
   );
 }

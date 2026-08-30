@@ -1,11 +1,13 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Loader2 } from "lucide-react";
 
 import { GLOSSARY_LIST } from "@/lib/glossary";
 import { usePanduanStore, usePublishedPanduan } from "@/store/panduan-store";
 import type { PanduanEntry } from "@/lib/types";
+import { AIPanduanSearch } from "./AIPanduanSearch";
 
 function StepCard({
   entry,
@@ -50,6 +52,11 @@ export function PanduanReader({ embedded = false }: { embedded?: boolean }) {
   const entries = usePublishedPanduan();
   const basePath = embedded ? "/dashboard/panduan" : "/panduan/langkah";
 
+  const [searchResults, setSearchResults] = React.useState<PanduanEntry[] | null>(null);
+  const [aiMessage, setAiMessage] = React.useState<string | null>(null);
+
+  const displayedEntries = searchResults ?? entries;
+
   if (!hydrated) {
     return (
       <div className={embedded ? "flex min-h-[40vh] items-center justify-center" : "container-page py-24"}>
@@ -85,9 +92,31 @@ export function PanduanReader({ embedded = false }: { embedded?: boolean }) {
 
   const Body = (
     <div className={embedded ? "mt-8 space-y-6" : "container-page py-14 sm:py-16"}>
+      <AIPanduanSearch 
+        entries={entries} 
+        onResult={(res, msg) => {
+          setSearchResults(res);
+          setAiMessage(msg);
+        }} 
+      />
+
+      {aiMessage && (
+        <div className="mb-4 rounded-lg bg-indigo-50 px-4 py-3 text-sm font-medium text-indigo-900 ring-1 ring-inset ring-indigo-200">
+          {aiMessage}
+        </div>
+      )}
+
       <ol className="space-y-3">
-        {entries.map((entry, i) => (
-          <StepCard key={entry.id} entry={entry} nomor={i + 1} basePath={basePath} />
+        {displayedEntries.map((entry, i) => (
+          <StepCard 
+            key={entry.id} 
+            entry={entry} 
+            // When filtering, we might want to show the original number, but since it's just steps, 
+            // for search results we can just show the index in the results or omit the number.
+            // Let's just pass the index + 1 for now.
+            nomor={i + 1} 
+            basePath={basePath} 
+          />
         ))}
       </ol>
 

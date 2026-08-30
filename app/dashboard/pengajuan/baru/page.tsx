@@ -24,7 +24,15 @@ export default function PengajuanBaruPage() {
     tanggalKirim: "",
   });
 
+  const profilLengkap = !!(
+    profile?.namaUsaha?.trim() &&
+    profile?.kota?.trim() &&
+    profile?.provinsi?.trim() &&
+    profile?.tahunBerdiri?.trim() &&
+    profile?.kategoriId?.trim()
+  );
   const nibOk = !!(profile?.nomorNib?.trim()) && !!(profile?.fileNib);
+  const siapEkspor = profilLengkap && nibOk;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,10 +51,10 @@ export default function PengajuanBaruPage() {
         Kembali ke Beranda
       </Link>
 
-      {!nibOk ? (
-        <Alert tone="warning" judul="NIB Belum Lengkap">
+      {!siapEkspor ? (
+        <Alert tone="warning" judul="Profil Usaha Belum Lengkap">
           <p className="mb-3">
-            Nomor NIB dan dokumen NIB wajib diisi dan diunggah di halaman{" "}
+            Data usaha dan dokumen NIB wajib diisi dengan lengkap di halaman{" "}
             <Link href="/dashboard/profil" className="font-semibold underline">
               Profil
             </Link>{" "}

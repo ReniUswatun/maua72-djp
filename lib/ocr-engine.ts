@@ -69,16 +69,36 @@ async function extractText(file: File, dataUrl: string): Promise<string> {
 // ─── Validation ─────────────────────────────────────────────────────
 
 function validateText(docId: string, text: string): DocumentOcrResult {
-  const template = DOC_TEMPLATES[docId] ?? detectTemplate(text);
-
-  if (!template) {
-    return {
-      status: "gagal_baca",
-      ringkas: "Tidak dapat mengidentifikasi jenis dokumen. Pastikan file benar.",
-      diperiksaPada: new Date().toISOString(),
-      template: "Tidak dikenali",
-      temuan: [],
-    };
+  let template = DOC_TEMPLATES[docId];
+  
+  if (template) {
+    const matched = template.identifikasi.some((r) => r.test(text));
+    if (!matched) {
+       const actualDetected = detectTemplate(text);
+       const ringkas = actualDetected 
+         ? `Dokumen terdeteksi sebagai ${actualDetected.templateName}, bukan ${template.templateName}. Pastikan Anda mengunggah file yang benar.`
+         : `Teks tidak mengandung kata kunci untuk ${template.templateName}. Pastikan file benar.`;
+       
+       return {
+           status: "gagal_baca",
+           ringkas,
+           diperiksaPada: new Date().toISOString(),
+           template: actualDetected ? actualDetected.templateName : "Tidak Dikenali",
+           temuan: [],
+       };
+    }
+  } else {
+    const detected = detectTemplate(text);
+    if (!detected) {
+      return {
+        status: "gagal_baca",
+        ringkas: "Tidak dapat mengidentifikasi jenis dokumen. Pastikan file benar.",
+        diperiksaPada: new Date().toISOString(),
+        template: "Tidak dikenali",
+        temuan: [],
+      };
+    }
+    template = detected;
   }
 
   const temuan: OcrFieldCheck[] = template.fields.map((rule) => {

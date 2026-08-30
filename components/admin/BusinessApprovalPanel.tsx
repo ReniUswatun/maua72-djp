@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Building2, CheckCircle2, ChevronDown, Clock3, XCircle } from "lucide-react";
+import { Building2, CheckCircle2, ChevronDown, Clock3, XCircle, Eye } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FilePreviewModal } from "@/components/shared/FilePreviewModal";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea, Label, Select } from "@/components/ui/input";
 import { DATA_USAHA_LABEL } from "@/lib/admin-data";
@@ -19,11 +20,18 @@ function tone(status: BusinessApprovalStatus) {
   return "warning" as const;
 }
 
-function DataRow({ label, value }: { label: string; value?: string }) {
+function DataRow({ label, value, fileUrl, onPreview }: { label: string; value?: string; fileUrl?: string | null; onPreview?: (url: string, title: string) => void }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
       <dt className="text-gray-500">{label}</dt>
-      <dd className="font-medium text-gray-900">{value?.trim() ? value : "—"}</dd>
+      <dd className="font-medium text-gray-900 flex items-center gap-2 text-right">
+        <span>{value?.trim() ? value : "—"}</span>
+        {fileUrl && onPreview && (
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs shrink-0" onClick={() => onPreview(fileUrl, label)}>
+            <Eye className="mr-1 h-3 w-3" /> Lihat
+          </Button>
+        )}
+      </dd>
     </div>
   );
 }
@@ -35,6 +43,14 @@ function CaseRow({ caseItem, canReview }: { caseItem: ApplicationCase; canReview
   const [catatan, setCatatan] = React.useState(caseItem.dataUsahaCatatan ?? "");
   const [saved, setSaved] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = React.useState("");
+
+  const handlePreview = (url: string, title: string) => {
+    setPreviewUrl(url);
+    setPreviewTitle(`Dokumen ${title}`);
+  };
 
   const simpan = (next: BusinessApprovalStatus) => {
     if ((next === "ditolak" || next === "menunggu") && !catatan.trim()) {
@@ -83,8 +99,8 @@ function CaseRow({ caseItem, canReview }: { caseItem: ApplicationCase; canReview
       {open ? (
         <div className="space-y-4 border-t border-gray-200 px-4 py-4">
           <dl className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
-            <DataRow label="Nomor NIB" value={caseItem.profile.nomorNib} />
-            <DataRow label="Nomor NPWP" value={caseItem.profile.nomorNpwp} />
+            <DataRow label="Nomor NIB" value={caseItem.profile.nomorNib} fileUrl={caseItem.profile.fileNib} onPreview={handlePreview} />
+            <DataRow label="Nomor NPWP" value={caseItem.profile.nomorNpwp} fileUrl={caseItem.profile.fileNpwp} onPreview={handlePreview} />
             <DataRow label="Kota / Provinsi" value={`${caseItem.city}, ${caseItem.province}`} />
             <DataRow label="Tahun berdiri" value={caseItem.profile.tahunBerdiri} />
             <DataRow label="Email" value={caseItem.email} />
@@ -146,6 +162,13 @@ function CaseRow({ caseItem, canReview }: { caseItem: ApplicationCase; canReview
           ) : (
             <Alert tone="neutral">Peran Anda hanya bisa melihat status persetujuan data usaha.</Alert>
           )}
+
+          <FilePreviewModal
+            open={!!previewUrl}
+            fileUrl={previewUrl}
+            namaFile={previewTitle}
+            onClose={() => setPreviewUrl(null)}
+          />
         </div>
       ) : null}
     </li>

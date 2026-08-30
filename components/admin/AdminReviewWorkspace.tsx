@@ -276,80 +276,88 @@ export function AdminReviewWorkspace({ caseItem }: { caseItem: ApplicationCase }
           <CardDescription>Setujui, minta info tambahan, atau tolak pengajuan ekspor.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!canDecide ? (
-            <Alert tone="warning" judul="Tidak bisa mengambil keputusan">
-              Peran Anda tidak memiliki izin <span className="font-semibold">case.decide</span>. Anda masih
-              dapat meninjau dokumen dan catatan OCR.
+          {caseItem.status === "disetujui" || caseItem.status === "ditolak" ? (
+            <Alert tone={statusTone(caseItem.status)}>
+              Pengajuan ini telah <span className="font-semibold">{STATUS_LABEL[caseItem.status]}</span>. Keputusan tidak dapat diubah lagi.
             </Alert>
-          ) : null}
+          ) : (
+            <>
+              {!canDecide ? (
+                <Alert tone="warning" judul="Tidak bisa mengambil keputusan">
+                  Peran Anda tidak memiliki izin <span className="font-semibold">case.decide</span>. Anda masih
+                  dapat meninjau dokumen dan catatan OCR.
+                </Alert>
+              ) : null}
 
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-            <p className="flex items-center gap-2 font-semibold text-gray-900">
-              <BadgeCheck className="h-4 w-4" aria-hidden />
-              Persetujuan data usaha
-            </p>
-            <p className="mt-2">
-              Status: <span className="font-medium">{DATA_USAHA_LABEL[caseItem.dataUsaha]}</span>
-              {caseItem.dataUsahaCatatan ? ` — ${caseItem.dataUsahaCatatan}` : ""}
-            </p>
-            <Link href="/admin/data-usaha" className="mt-3 inline-block">
-              <Button size="sm" variant="subtle">Buka halaman persetujuan data usaha</Button>
-            </Link>
-          </div>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+                <p className="flex items-center gap-2 font-semibold text-gray-900">
+                  <BadgeCheck className="h-4 w-4" aria-hidden />
+                  Persetujuan data usaha
+                </p>
+                <p className="mt-2">
+                  Status: <span className="font-medium">{DATA_USAHA_LABEL[caseItem.dataUsaha]}</span>
+                  {caseItem.dataUsahaCatatan ? ` — ${caseItem.dataUsahaCatatan}` : ""}
+                </p>
+                <Link href="/admin/data-usaha" className="mt-3 inline-block">
+                  <Button size="sm" variant="subtle">Buka halaman persetujuan data usaha</Button>
+                </Link>
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="final-reason">Alasan keputusan</Label>
-            <Textarea
-              id="final-reason"
-              value={finalReason}
-              onChange={(event) => setFinalReason(event.target.value)}
-              placeholder="Tulis alasan singkat dan dapat diaudit."
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="final-reason">Alasan keputusan</Label>
+                <Textarea
+                  id="final-reason"
+                  value={finalReason}
+                  onChange={(event) => setFinalReason(event.target.value)}
+                  placeholder="Tulis alasan singkat dan dapat diaudit."
+                />
+              </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            {caseItem.status === "baru" ? (
-              <Button
-                disabled={!canDecide}
-                onClick={() => {
-                  submitReview(caseItem.id);
-                  useAppStore.getState().terapkanReviewAdmin(caseItem.id, {
-                    status: "review",
-                    timelineJudul: "Pengajuan mulai direview admin",
-                    timelineDetail: "Admin membuka dan mulai meninjau pengajuan.",
-                  });
-                  setFeedbackTone("success");
-                  setStatusMessage("Pengajuan ditandai sedang direview.");
-                }}
-              >
-                <Send className="h-4 w-4" aria-hidden />
-                Mulai Review
-              </Button>
-            ) : null}
-            <Button
-              disabled={!canDecide}
-              onClick={() => decide("disetujui", "Pengajuan disetujui dan siap dikabari ke UMKM.", false)}
-            >
-              <CheckCircle2 className="h-4 w-4" aria-hidden />
-              Setujui Pengajuan
-            </Button>
-            <Button
-              variant="outline"
-              disabled={!canDecide}
-              onClick={() => decide("membutuhkan_info", "Permintaan info tambahan sudah dicatat.", true)}
-            >
-              <CircleAlert className="h-4 w-4" aria-hidden />
-              Minta Info Tambahan
-            </Button>
-            <Button
-              variant="danger"
-              disabled={!canDecide}
-              onClick={() => decide("ditolak", "Keputusan penolakan sudah dicatat.", true)}
-            >
-              <AlertTriangle className="h-4 w-4" aria-hidden />
-              Tolak Pengajuan
-            </Button>
-          </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                {caseItem.status === "baru" ? (
+                  <Button
+                    disabled={!canDecide}
+                    onClick={() => {
+                      submitReview(caseItem.id);
+                      useAppStore.getState().terapkanReviewAdmin(caseItem.id, {
+                        status: "review",
+                        timelineJudul: "Pengajuan mulai direview admin",
+                        timelineDetail: "Admin membuka dan mulai meninjau pengajuan.",
+                      });
+                      setFeedbackTone("success");
+                      setStatusMessage("Pengajuan ditandai sedang direview.");
+                    }}
+                  >
+                    <Send className="h-4 w-4" aria-hidden />
+                    Mulai Review
+                  </Button>
+                ) : null}
+                <Button
+                  disabled={!canDecide}
+                  onClick={() => decide("disetujui", "Pengajuan disetujui dan siap dikabari ke UMKM.", false)}
+                >
+                  <CheckCircle2 className="h-4 w-4" aria-hidden />
+                  Setujui Pengajuan
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={!canDecide}
+                  onClick={() => decide("membutuhkan_info", "Permintaan info tambahan sudah dicatat.", true)}
+                >
+                  <CircleAlert className="h-4 w-4" aria-hidden />
+                  Minta Info Tambahan
+                </Button>
+                <Button
+                  variant="danger"
+                  disabled={!canDecide}
+                  onClick={() => decide("ditolak", "Keputusan penolakan sudah dicatat.", true)}
+                >
+                  <AlertTriangle className="h-4 w-4" aria-hidden />
+                  Tolak Pengajuan
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
